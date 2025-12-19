@@ -1,0 +1,232 @@
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { AudienceProfile } from '@/types/database';
+import { 
+  isBaseAppAvailable, 
+  connectWithBaseApp, 
+  generateNonce 
+} from '@/lib/baseWallet';
+
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isLoading: boolean;
+  audienceProfile: AudienceProfile | null;
+  needsOnboarding: boolean;
+  walletAddress: string | null;
+  isBaseAppDetected: boolean;
+  signInWithBase: () => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [audienceProfile, setAudienceProfile] = useState<AudienceProfile | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isBaseAppDetected, setIsBaseAppDetected] = useState(false);
+
+  // Check for Base App on mount
+  useEffect(() => {
+    setIsBaseAppDetected(isBaseAppAvailable());
+  }, []);
+
+  const fetchUserRole = async (userId: string) => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (data) {
+      setIsAdmin(data.role === 'admin');
+    }
+  };
+
+  const fetchAudienceProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('audience_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (data) {
+      setAudienceProfile(data as AudienceProfile);
+      setNeedsOnboarding(!data.onboarding_completed);
+    } else {
+      setAudienceProfile(null);
+      setNeedsOnboarding(true);
+    }
+  };
+
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchAudienceProfile(user.id);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Extract wallet address from user metadata
+        if (session?.user?.user_metadata?.base_wallet_address) {
+          setWalletAddress(session.user.user_metadata.base_wallet_address);
+        }
+        
+        if (session?.user) {
+          // Defer data fetching with setTimeout to prevent deadlock
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+            fetchAudienceProfile(session.user.id);
+          }, 0);
+        } else {
+          setIsAdmin(false);
+          setAudienceProfile(null);
+          setNeedsOnboarding(false);
+          setWalletAddress(null);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user?.user_metadata?.base_wallet_address) {
+        setWalletAddress(session.user.user_metadata.base_wallet_address);
+      }
+      
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+        fetchAudienceProfile(session.user.id);
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  /**
+   * Base App Sign-In Flow with Wallet Signature Verification
+   * 
+   * This implementation:
+   * 1. Detects if Base App wallet is available
+   * 2. If available: Uses real wallet connection with SIWE signature
+   * 3. If not available: Uses simulated connection for development
+   * 4. Verifies signature via edge function
+   * 5. Creates/authenticates user in Supabase
+   */
+  const signInWithBase = useCallback(async () => {
+    try {
+      // Require Base App to be detected - no bypass allowed
+      if (!isBaseAppDetected) {
+        return { 
+          error: new Error('Base App not detected. Please install Base App to continue.') 
+        };
+      }
+      
+      // Generate nonce for SIWE message
+      const nonce = generateNonce();
+      
+      // Real Base App connection only
+      const connectionResult = await connectWithBaseApp(nonce);
+      
+      if (!connectionResult.success || !connectionResult.address) {
+        return { 
+          error: new Error(connectionResult.error || 'Base App connection failed') 
+        };
+      }
+      
+      const { address, message, signature } = connectionResult;
+      
+      // Verify signature and authenticate via edge function
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+        'verify-base-signature',
+        {
+          body: {
+            action: 'verify',
+            address,
+            message,
+            signature,
+            nonce,
+          },
+        }
+      );
+      
+      if (verifyError || !verifyData?.success) {
+        console.error('Signature verification failed:', verifyError || verifyData?.error);
+        return { 
+          error: new Error('Wallet signature verification failed. Please try again.') 
+        };
+      }
+      
+      // Set session from edge function response
+      if (verifyData.session) {
+        await supabase.auth.setSession({
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
+        });
+        setWalletAddress(verifyData.walletAddress);
+      }
+      
+      return { error: null };
+    } catch (err: any) {
+      console.error('Base App sign-in error:', err);
+      return { error: new Error('Base App connection failed. Please try again.') };
+    }
+  }, [isBaseAppDetected]);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setIsAdmin(false);
+    setAudienceProfile(null);
+    setNeedsOnboarding(false);
+    setWalletAddress(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ 
+      user,
+      session,
+      isAuthenticated: !!session, 
+      isAdmin,
+      isLoading,
+      audienceProfile, 
+      needsOnboarding,
+      walletAddress,
+      isBaseAppDetected,
+      signInWithBase,
+      signOut,
+      refreshProfile
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
