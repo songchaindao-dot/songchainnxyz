@@ -27,45 +27,68 @@ interface ConnectResult {
 }
 
 /**
- * Check if Base App wallet is available
+ * Detect if we're running inside the Coinbase/Base in-app browser.
+ * Useful as a fallback when injected provider flags aren't present.
+ */
+export function isCoinbaseInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /CoinbaseWallet|BaseApp/i.test(ua);
+}
+
+/**
+ * Basic injected provider presence check.
+ */
+export function hasInjectedEthereum(): boolean {
+  if (typeof window === "undefined") return false;
+  const ethereum = (window as any).ethereum;
+  return !!ethereum?.request;
+}
+
+/**
+ * Check if Base App wallet environment is available.
  */
 export function isBaseAppAvailable(): boolean {
-  if (typeof window === "undefined") return false;
+  if (!hasInjectedEthereum()) return false;
 
   const ethereum = (window as any).ethereum;
-  if (!ethereum) return false;
 
   // Direct flags (most common)
   if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) return true;
 
   // Multi-provider injection (e.g., multiple wallets installed)
   if (Array.isArray(ethereum.providers)) {
-    return ethereum.providers.some(
-      (p: any) => p?.isBaseApp || p?.isCoinbaseWallet
-    );
+    if (ethereum.providers.some((p: any) => p?.isBaseApp || p?.isCoinbaseWallet)) return true;
   }
 
-  return false;
+  // Fallback: in-app browser sometimes doesn't expose flags consistently
+  return isCoinbaseInAppBrowser();
 }
 
 /**
  * Get the Base App provider
  */
 function getBaseProvider(): BaseProvider | null {
-  if (typeof window === "undefined") return null;
+  if (!hasInjectedEthereum()) return null;
 
   const ethereum = (window as any).ethereum;
-  if (!ethereum) return null;
+  const isProvider = (p: any) => p && typeof p.request === "function";
 
   // If multiple wallets are injected, prefer Base/Coinbase provider.
   if (Array.isArray(ethereum.providers)) {
     const preferred = ethereum.providers.find(
-      (p: any) => p?.isBaseApp || p?.isCoinbaseWallet
+      (p: any) => (p?.isBaseApp || p?.isCoinbaseWallet) && isProvider(p)
     );
-    if (preferred?.request) return preferred as BaseProvider;
+    if (preferred) return preferred as BaseProvider;
+
+    // If we're in Coinbase/Base in-app browser but flags are missing, pick first usable provider.
+    if (isCoinbaseInAppBrowser()) {
+      const first = ethereum.providers.find((p: any) => isProvider(p));
+      if (first) return first as BaseProvider;
+    }
   }
 
-  return ethereum as BaseProvider;
+  return isProvider(ethereum) ? (ethereum as BaseProvider) : null;
 }
 
 /**
@@ -112,29 +135,7 @@ export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> 
   }
 
   try {
-    // Switch to Base chain
-    try {
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: BASE_CHAIN_ID }],
-      });
-    } catch (switchError: any) {
-      // Chain not added, try to add it
-      if (switchError.code === 4902) {
-        await provider.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId: BASE_CHAIN_ID,
-            chainName: "Base",
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-            rpcUrls: ["https://mainnet.base.org"],
-            blockExplorerUrls: ["https://basescan.org"],
-          }],
-        });
-      }
-    }
-
-    // Request accounts first to ensure we have access
+    // Request accounts first (permission-gated in most wallets)
     const accounts = await provider.request({
       method: "eth_requestAccounts",
       params: [],
@@ -148,15 +149,50 @@ export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> 
     }
 
     const address = accounts[0];
-    
+
+    // Best-effort: switch to Base chain after permissions are granted
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: BASE_CHAIN_ID }],
+      });
+    } catch (switchError: any) {
+      // Chain not added, try to add it
+      if (switchError?.code === 4902) {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: BASE_CHAIN_ID,
+              chainName: "Base",
+              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://mainnet.base.org"],
+              blockExplorerUrls: ["https://basescan.org"],
+            },
+          ],
+        });
+      }
+      // Otherwise ignore: signing can still proceed in many wallet contexts.
+    }
+
     // Create SIWE message with proper format
     const message = createSIWEMessage(address, nonce);
 
-    // Sign the message using personal_sign (most widely supported)
-    const signature = await provider.request({
-      method: "personal_sign",
-      params: [message, address],
-    });
+    // Sign the message
+    let signature: string;
+    try {
+      // Most widely supported
+      signature = await provider.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
+    } catch (signError: any) {
+      // Fallback used by some providers
+      signature = await provider.request({
+        method: "eth_sign",
+        params: [address, message],
+      });
+    }
 
     return {
       success: true,
@@ -165,10 +201,15 @@ export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> 
       signature,
     };
   } catch (error: any) {
+    // EIP-1193 user rejected request
+    if (error?.code === 4001) {
+      return { success: false, error: "Signature request was rejected in wallet." };
+    }
+
     console.error("Base App connection error:", error);
     return {
       success: false,
-      error: error.message || "Failed to connect to Base App",
+      error: error?.message || "Failed to connect to Base App",
     };
   }
 }

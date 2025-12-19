@@ -17,6 +17,9 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
+  const hasInjectedWallet =
+    typeof window !== 'undefined' && !!(window as any).ethereum?.request;
+
   const openInBaseApp = () => {
     const target = window.location.href;
     window.location.href = getBaseAppDappLink(target);
@@ -25,8 +28,9 @@ export default function Auth() {
   const handleBaseSignIn = async () => {
     setError(null);
 
-    // If we're not inside Base App yet, open the dapp inside Base App so it can inject the wallet provider.
-    if (!isBaseAppDetected) {
+    // If the provider isn't injected yet, deep-link into Base App so it can inject the wallet.
+    // (If provider exists but flags are missing, still try signing.)
+    if (!hasInjectedWallet && !isBaseAppDetected) {
       openInBaseApp();
       return;
     }
@@ -34,7 +38,7 @@ export default function Auth() {
     setConnectionState('connecting');
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       setConnectionState('signing');
 
       const result = await signInWithBase();
@@ -44,7 +48,7 @@ export default function Auth() {
         setConnectionState('idle');
       } else {
         setConnectionState('verifying');
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 400));
         setConnectionState('success');
       }
     } catch (err) {
@@ -93,13 +97,15 @@ export default function Auth() {
             Connected!
           </>
         );
-      default:
+      default: {
+        const readyToSign = isBaseAppDetected || hasInjectedWallet;
         return (
           <>
             <Wallet className="w-5 h-5 mr-2" />
-            {isBaseAppDetected ? 'Connect Base Wallet' : 'Open Base App to Connect'}
+            {readyToSign ? 'Continue to Sign' : 'Open Base App to Connect'}
           </>
         );
+      }
     }
   };
 
@@ -178,11 +184,11 @@ export default function Auth() {
                 </div>
 
                 {/* Base App Detection Status */}
-                {isBaseAppDetected && (
+                {(isBaseAppDetected || hasInjectedWallet) && (
                   <div className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-lg bg-green-500/10 border border-green-500/20">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                     <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                      Base App detected
+                      Wallet detected — tap Continue to Sign
                     </span>
                   </div>
                 )}
