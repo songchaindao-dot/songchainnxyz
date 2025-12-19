@@ -5,26 +5,70 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import logo from '@/assets/songchainn-logo.png';
 
+type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying';
+
 export default function Auth() {
   const { signInWithBase, isBaseAppDetected } = useAuth();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const handleBaseSignIn = async () => {
     setError(null);
-    setIsConnecting(true);
+    setConnectionState('connecting');
     
     try {
+      // Short delay to show connecting state
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setConnectionState('signing');
+      
       const result = await signInWithBase();
+      
       if (result.error) {
         setError(result.error.message);
+        setConnectionState('idle');
+      } else {
+        setConnectionState('verifying');
       }
     } catch (err) {
       setError('Base App connection failed. Please try again.');
-    } finally {
-      setIsConnecting(false);
+      setConnectionState('idle');
     }
   };
+
+  const getButtonContent = () => {
+    switch (connectionState) {
+      case 'connecting':
+        return (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Connecting to Wallet...
+          </>
+        );
+      case 'signing':
+        return (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Sign the message in your wallet...
+          </>
+        );
+      case 'verifying':
+        return (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Verifying signature...
+          </>
+        );
+      default:
+        return (
+          <>
+            <Wallet className="w-5 h-5 mr-2" />
+            {isBaseAppDetected ? 'Connect Base Wallet' : 'Connect with Base App'}
+          </>
+        );
+    }
+  };
+
+  const isLoading = connectionState !== 'idle';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -96,20 +140,10 @@ export default function Auth() {
           {/* Base App Sign In Button */}
           <Button
             onClick={handleBaseSignIn}
-            disabled={isConnecting}
+            disabled={isLoading}
             className="w-full gradient-primary text-primary-foreground font-semibold h-12 shadow-glow hover:scale-[1.02] transition-transform mb-4"
           >
-            {isConnecting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Connecting to Base...
-              </>
-            ) : (
-              <>
-                <Wallet className="w-5 h-5 mr-2" />
-                {isBaseAppDetected ? 'Connect Base Wallet' : 'Connect with Base App'}
-              </>
-            )}
+            {getButtonContent()}
           </Button>
 
           {/* Wallet Verification Info */}
