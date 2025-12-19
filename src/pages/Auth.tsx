@@ -7,28 +7,44 @@ import logo from '@/assets/songchainn-logo.png';
 
 type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success';
 
+function getBaseAppDappLink(targetUrl: string) {
+  return `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(targetUrl)}`;
+}
+
 export default function Auth() {
   const { signInWithBase, isBaseAppDetected, walletAddress } = useAuth();
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
+  const openInBaseApp = () => {
+    const target = window.location.href;
+    window.location.href = getBaseAppDappLink(target);
+  };
+
   const handleBaseSignIn = async () => {
     setError(null);
+
+    // If we're not inside Base App yet, open the dapp inside Base App so it can inject the wallet provider.
+    if (!isBaseAppDetected) {
+      openInBaseApp();
+      return;
+    }
+
     setConnectionState('connecting');
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       setConnectionState('signing');
-      
+
       const result = await signInWithBase();
-      
+
       if (result.error) {
         setError(result.error.message);
         setConnectionState('idle');
       } else {
         setConnectionState('verifying');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         setConnectionState('success');
       }
     } catch (err) {
@@ -81,7 +97,7 @@ export default function Auth() {
         return (
           <>
             <Wallet className="w-5 h-5 mr-2" />
-            {isBaseAppDetected ? 'Connect Base Wallet' : 'Connect with Base App'}
+            {isBaseAppDetected ? 'Connect Base Wallet' : 'Open Base App to Connect'}
           </>
         );
     }

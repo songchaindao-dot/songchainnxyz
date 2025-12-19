@@ -31,13 +31,21 @@ interface ConnectResult {
  */
 export function isBaseAppAvailable(): boolean {
   if (typeof window === "undefined") return false;
-  
-  // Check for Base App provider
+
   const ethereum = (window as any).ethereum;
   if (!ethereum) return false;
-  
-  // Base App injects specific properties
-  return ethereum.isBaseApp || ethereum.isCoinbaseWallet || false;
+
+  // Direct flags (most common)
+  if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) return true;
+
+  // Multi-provider injection (e.g., multiple wallets installed)
+  if (Array.isArray(ethereum.providers)) {
+    return ethereum.providers.some(
+      (p: any) => p?.isBaseApp || p?.isCoinbaseWallet
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -45,11 +53,18 @@ export function isBaseAppAvailable(): boolean {
  */
 function getBaseProvider(): BaseProvider | null {
   if (typeof window === "undefined") return null;
-  
+
   const ethereum = (window as any).ethereum;
   if (!ethereum) return null;
-  
-  // Return the provider
+
+  // If multiple wallets are injected, prefer Base/Coinbase provider.
+  if (Array.isArray(ethereum.providers)) {
+    const preferred = ethereum.providers.find(
+      (p: any) => p?.isBaseApp || p?.isCoinbaseWallet
+    );
+    if (preferred?.request) return preferred as BaseProvider;
+  }
+
   return ethereum as BaseProvider;
 }
 
