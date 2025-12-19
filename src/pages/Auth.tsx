@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, ExternalLink, Loader2, Shield, Music, Users, CheckCircle2 } from 'lucide-react';
+import { Wallet, ExternalLink, Loader2, Shield, Music, Users, CheckCircle2, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import logo from '@/assets/songchainn-logo.png';
 
 type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success';
+type AuthMode = 'signin' | 'signup';
 
 /**
  * Build a mobile deep link that opens the current page inside the Base App browser.
  * Uses the cbwallet:// protocol which is handled natively by the Base App.
  */
 function getBaseAppDeepLink(targetUrl: string) {
-  // cbwallet://dapp is the native deep link scheme for Coinbase/Base Wallet
   return `cbwallet://dapp?url=${encodeURIComponent(targetUrl)}`;
 }
 
@@ -22,6 +26,14 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  
+  // Email/Phone auth state
+  const [authMethod, setAuthMethod] = useState<'wallet' | 'email' | 'phone'>('wallet');
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
 
   const hasInjectedWallet =
     typeof window !== 'undefined' && !!(window as any).ethereum?.request;
@@ -29,22 +41,14 @@ export default function Auth() {
   const openInBaseApp = () => {
     const target = window.location.href;
     const deepLink = getBaseAppDeepLink(target);
-    
-    // Try native deep link first
     window.location.href = deepLink;
-    
-    // If deep link doesn't work after a short delay, show install prompt
     setTimeout(() => {
-      // If we're still on this page, the deep link likely failed
       setShowInstallPrompt(true);
     }, 2500);
   };
 
   const handleBaseSignIn = async () => {
     setError(null);
-
-    // If the provider isn't injected yet, deep-link into Base App so it can inject the wallet.
-    // (If provider exists but flags are missing, still try signing.)
     if (!hasInjectedWallet && !isBaseAppDetected) {
       openInBaseApp();
       return;
@@ -72,16 +76,65 @@ export default function Auth() {
     }
   };
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsEmailLoading(true);
+
+    try {
+      if (authMode === 'signup') {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
+        if (error) throw error;
+        toast.success('Account created! You can now sign in.');
+        setAuthMode('signin');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        setConnectionState('success');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const handlePhoneAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsEmailLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+      });
+      if (error) throw error;
+      toast.success('OTP sent to your phone!');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP');
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
   // Auto-trigger wallet sign-in when opened inside Base App
   React.useEffect(() => {
-    if ((isBaseAppDetected || hasInjectedWallet) && connectionState === 'idle' && !error) {
-      // Small delay to ensure UI is ready
+    if ((isBaseAppDetected || hasInjectedWallet) && connectionState === 'idle' && !error && authMethod === 'wallet') {
       const timer = setTimeout(() => {
         handleBaseSignIn();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isBaseAppDetected, hasInjectedWallet]);
+  }, [isBaseAppDetected, hasInjectedWallet, authMethod]);
 
   React.useEffect(() => {
     if (walletAddress && connectionState === 'success') {
@@ -182,9 +235,9 @@ export default function Auth() {
                   <CheckCircle2 className="w-8 h-8 text-green-500" />
                 </motion.div>
                 <h3 className="font-heading text-xl font-semibold text-foreground mb-2">
-                  Wallet Connected!
+                  {authMethod === 'wallet' ? 'Wallet Connected!' : 'Signed In!'}
                 </h3>
-                {(connectedAddress || walletAddress) && (
+                {(connectedAddress || walletAddress) && authMethod === 'wallet' && (
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 border border-border mb-4">
                     <Wallet className="w-4 h-4 text-primary" />
                     <code className="text-sm font-mono text-foreground">
@@ -201,30 +254,191 @@ export default function Auth() {
               </motion.div>
             ) : (
               <motion.div key="form" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Base Requirement */}
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <Shield className="w-5 h-5 text-primary" />
-                  <h2 className="font-heading font-semibold text-foreground">
-                    Base App Required
-                  </h2>
-                </div>
+                {/* Auth Method Tabs */}
+                <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as any)} className="mb-6">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="wallet" className="text-xs">
+                      <Wallet className="w-4 h-4 mr-1" />
+                      Wallet
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="text-xs">
+                      <Mail className="w-4 h-4 mr-1" />
+                      Email
+                    </TabsTrigger>
+                    <TabsTrigger value="phone" className="text-xs">
+                      <Phone className="w-4 h-4 mr-1" />
+                      Phone
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Base App Detection Status */}
-                {(isBaseAppDetected || hasInjectedWallet) && (
-                  <div className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                      Wallet detected — tap Continue to Sign
-                    </span>
-                  </div>
-                )}
-                
-                <p className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
-                  Connect with Base App to access SongChainn and join the Audience experience.
-                </p>
+                  {/* Wallet Tab */}
+                  <TabsContent value="wallet" className="mt-4">
+                    {(isBaseAppDetected || hasInjectedWallet) && (
+                      <div className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          Wallet detected — tap Continue to Sign
+                        </span>
+                      </div>
+                    )}
+
+                    <p className="text-sm text-muted-foreground text-center mb-4 leading-relaxed">
+                      Connect with Base App wallet for the best experience.
+                    </p>
+
+                    {error && authMethod === 'wallet' && (
+                      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-destructive text-center">{error}</p>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleBaseSignIn}
+                      disabled={isLoading}
+                      className="w-full gradient-primary text-primary-foreground font-semibold h-12 shadow-glow hover:scale-[1.02] transition-transform"
+                    >
+                      {getButtonContent()}
+                    </Button>
+
+                    <div className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5">
+                      <Shield className="w-3 h-3" />
+                      <span>Wallet signature verification enabled</span>
+                    </div>
+
+                    {(!isBaseAppDetected || showInstallPrompt) && (
+                      <div className="text-center pt-4 mt-4 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {showInstallPrompt 
+                            ? "Base App not found. Install it to continue:" 
+                            : "Don't have Base App yet?"}
+                        </p>
+                        <a
+                          href="https://base.app/invite/imanafrikah/WTL0V0H3"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors font-medium text-sm"
+                        >
+                          Download Base App
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Email Tab */}
+                  <TabsContent value="email" className="mt-4">
+                    <form onSubmit={handleEmailAuth} className="space-y-4">
+                      <div>
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className="h-12"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          type="password"
+                          placeholder="Password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          className="h-12"
+                        />
+                      </div>
+
+                      {error && authMethod === 'email' && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                          <p className="text-sm text-destructive text-center">{error}</p>
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={isEmailLoading}
+                        className="w-full gradient-primary text-primary-foreground font-semibold h-12"
+                      >
+                        {isEmailLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : authMode === 'signup' ? (
+                          'Create Account'
+                        ) : (
+                          'Sign In'
+                        )}
+                      </Button>
+
+                      <p className="text-center text-sm text-muted-foreground">
+                        {authMode === 'signin' ? (
+                          <>
+                            Don't have an account?{' '}
+                            <button
+                              type="button"
+                              onClick={() => setAuthMode('signup')}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              Sign up
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            Already have an account?{' '}
+                            <button
+                              type="button"
+                              onClick={() => setAuthMode('signin')}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              Sign in
+                            </button>
+                          </>
+                        )}
+                      </p>
+                    </form>
+                  </TabsContent>
+
+                  {/* Phone Tab */}
+                  <TabsContent value="phone" className="mt-4">
+                    <form onSubmit={handlePhoneAuth} className="space-y-4">
+                      <div>
+                        <Input
+                          type="tel"
+                          placeholder="+1 234 567 8900"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          required
+                          className="h-12"
+                        />
+                      </div>
+
+                      {error && authMethod === 'phone' && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                          <p className="text-sm text-destructive text-center">{error}</p>
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={isEmailLoading}
+                        className="w-full gradient-primary text-primary-foreground font-semibold h-12"
+                      >
+                        {isEmailLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          'Send OTP Code'
+                        )}
+                      </Button>
+
+                      <p className="text-center text-xs text-muted-foreground">
+                        We'll send a one-time code to verify your number
+                      </p>
+                    </form>
+                  </TabsContent>
+                </Tabs>
 
                 {/* Features */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border">
                   <div className="py-3 px-2 rounded-xl bg-secondary/50 text-center">
                     <Music className="w-5 h-5 mx-auto text-primary mb-1.5" />
                     <p className="text-xs text-muted-foreground leading-tight">Stream Music</p>
@@ -234,48 +448,6 @@ export default function Auth() {
                     <p className="text-xs text-muted-foreground leading-tight">Join Audience</p>
                   </div>
                 </div>
-
-                {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-destructive text-center">{error}</p>
-                  </div>
-                )}
-
-                {/* Base App Sign In Button */}
-                <Button
-                  onClick={handleBaseSignIn}
-                  disabled={isLoading}
-                  className="w-full gradient-primary text-primary-foreground font-semibold h-12 shadow-glow hover:scale-[1.02] transition-transform mb-4"
-                >
-                  {getButtonContent()}
-                </Button>
-
-                {/* Wallet Verification Info */}
-                <div className="text-center text-xs text-muted-foreground mb-4 flex items-center justify-center gap-1.5">
-                  <Shield className="w-3 h-3" />
-                  <span>Wallet signature verification enabled</span>
-                </div>
-
-                {/* Download Base App CTA - show if Base not detected or if deep link failed */}
-                {(!isBaseAppDetected || showInstallPrompt) && (
-                  <div className="text-center pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground mb-3 mt-4">
-                      {showInstallPrompt 
-                        ? "Base App not found. Install it to continue:" 
-                        : "Don't have Base App yet?"}
-                    </p>
-                    <a
-                      href="https://base.app/invite/imanafrikah/WTL0V0H3"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors font-medium text-sm"
-                    >
-                      Download Base App to Enter SongChainn
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                    <p className="text-xs text-muted-foreground mt-2">Free to download • Earn by Being Social</p>
-                  </div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -286,16 +458,14 @@ export default function Auth() {
           <div className="bg-secondary/30 rounded-xl p-4 border border-border">
             <h3 className="text-sm font-semibold text-foreground mb-2">Audience Edition</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Base App access is required now. On-chain verification deepens in later phases 
-              as the platform evolves toward full ownership capabilities.
+              Sign in with wallet, email, or phone to join SongChainn.
             </p>
           </div>
           
-          {/* Verification Status */}
           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-              <span>SIWE Enabled</span>
+              <span>Secure Auth</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
