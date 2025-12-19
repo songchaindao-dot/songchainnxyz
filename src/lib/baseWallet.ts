@@ -119,62 +119,36 @@ export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> 
       }
     }
 
-    // Try wallet_connect with SIWE (Base App native method)
-    try {
-      const result = await provider.request({
-        method: "wallet_connect",
-        params: [{
-          version: "1",
-          capabilities: {
-            signInWithEthereum: {
-              nonce,
-              chainId: BASE_CHAIN_ID,
-            },
-          },
-        }],
-      });
+    // Request accounts first to ensure we have access
+    const accounts = await provider.request({
+      method: "eth_requestAccounts",
+      params: [],
+    });
 
-      const { address } = result.accounts[0];
-      const { message, signature } = result.accounts[0].capabilities.signInWithEthereum;
-
+    if (!accounts || accounts.length === 0) {
       return {
-        success: true,
-        address,
-        message,
-        signature,
-      };
-    } catch (walletConnectError: any) {
-      // Fallback for wallets that don't support wallet_connect
-      // Use eth_requestAccounts + personal_sign
-      console.log("wallet_connect not supported, falling back to personal_sign");
-
-      const accounts = await provider.request({
-        method: "eth_requestAccounts",
-        params: [],
-      });
-
-      if (!accounts || accounts.length === 0) {
-        return {
-          success: false,
-          error: "No accounts returned from wallet",
-        };
-      }
-
-      const address = accounts[0];
-      const message = createSIWEMessage(address, nonce);
-
-      const signature = await provider.request({
-        method: "personal_sign",
-        params: [message, address],
-      });
-
-      return {
-        success: true,
-        address,
-        message,
-        signature,
+        success: false,
+        error: "No accounts returned from wallet",
       };
     }
+
+    const address = accounts[0];
+    
+    // Create SIWE message with proper format
+    const message = createSIWEMessage(address, nonce);
+
+    // Sign the message using personal_sign (most widely supported)
+    const signature = await provider.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+
+    return {
+      success: true,
+      address,
+      message,
+      signature,
+    };
   } catch (error: any) {
     console.error("Base App connection error:", error);
     return {
