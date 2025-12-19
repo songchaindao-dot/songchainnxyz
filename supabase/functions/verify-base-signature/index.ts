@@ -81,7 +81,7 @@ serve(async (req) => {
       // The signature verification happens on-chain for smart contract wallets
       // For now, we verify the address format and message structure
       
-      // Validate address format
+      // Validate address format (case-insensitive for checksummed addresses)
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return new Response(
@@ -90,11 +90,16 @@ serve(async (req) => {
         );
       }
 
-      // Validate SIWE message structure
-      const domainMatch = message.match(/wants you to sign in with your Ethereum account/);
-      if (!domainMatch) {
+      // Validate SIWE message - check for standard SIWE patterns or the address in the message
+      // Base wallet may return different formats depending on the connection method
+      const hasSIWEFormat = message.includes("wants you to sign in with your Ethereum account") ||
+                            message.includes("Sign in to SongChainn") ||
+                            message.toLowerCase().includes(address.toLowerCase());
+      
+      if (!hasSIWEFormat) {
+        console.log("Message validation failed. Message:", message.substring(0, 200));
         return new Response(
-          JSON.stringify({ error: "Invalid SIWE message structure" }),
+          JSON.stringify({ error: "Invalid message format" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
