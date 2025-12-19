@@ -147,27 +147,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signInWithBase = useCallback(async () => {
     try {
-      // Require Base App to be available (fresh check at click-time)
-      if (!isBaseAppAvailable()) {
-        return {
-          error: new Error('Base App not detected. Please open this site inside Base App to continue.'),
-        };
-      }
-      
       // Generate nonce for SIWE message
       const nonce = generateNonce();
-      
-      // Real Base App connection only
+
+      // Attempt connection + signing (provider presence/availability is handled inside)
       const connectionResult = await connectWithBaseApp(nonce);
-      
-      if (!connectionResult.success || !connectionResult.address) {
-        return { 
-          error: new Error(connectionResult.error || 'Base App connection failed') 
+
+      if (
+        !connectionResult.success ||
+        !connectionResult.address ||
+        !connectionResult.message ||
+        !connectionResult.signature
+      ) {
+        return {
+          error: new Error(
+            connectionResult.error ||
+              'Base App not detected. Please open this site inside Base App to continue.'
+          ),
         };
       }
-      
+
       const { address, message, signature } = connectionResult;
-      
+
       // Verify signature and authenticate via edge function
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
         'verify-base-signature',
@@ -181,14 +182,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
         }
       );
-      
+
       if (verifyError || !verifyData?.success) {
-        console.error('Signature verification failed:', verifyError || verifyData?.error);
-        return { 
-          error: new Error('Wallet signature verification failed. Please try again.') 
+        return {
+          error: new Error(
+            verifyData?.error || 'Wallet signature verification failed. Please try again.'
+          ),
         };
       }
-      
+
       // Set session from edge function response
       if (verifyData.session) {
         await supabase.auth.setSession({
@@ -197,11 +199,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setWalletAddress(verifyData.walletAddress);
       }
-      
+
       return { error: null };
     } catch (err: any) {
-      console.error('Base App sign-in error:', err);
-      return { error: new Error('Base App connection failed. Please try again.') };
+      return {
+        error: new Error(err?.message || 'Base App connection failed. Please try again.'),
+      };
     }
   }, []);
 
