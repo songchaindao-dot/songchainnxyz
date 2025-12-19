@@ -72,6 +72,17 @@ export default function Auth() {
     }
   };
 
+  // Auto-trigger wallet sign-in when opened inside Base App
+  React.useEffect(() => {
+    if ((isBaseAppDetected || hasInjectedWallet) && connectionState === 'idle' && !error) {
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        handleBaseSignIn();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isBaseAppDetected, hasInjectedWallet]);
+
   React.useEffect(() => {
     if (walletAddress && connectionState === 'success') {
       setConnectedAddress(walletAddress);
