@@ -7,8 +7,13 @@ import logo from '@/assets/songchainn-logo.png';
 
 type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success';
 
-function getBaseAppDappLink(targetUrl: string) {
-  return `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(targetUrl)}`;
+/**
+ * Build a mobile deep link that opens the current page inside the Base App browser.
+ * Uses the cbwallet:// protocol which is handled natively by the Base App.
+ */
+function getBaseAppDeepLink(targetUrl: string) {
+  // cbwallet://dapp is the native deep link scheme for Coinbase/Base Wallet
+  return `cbwallet://dapp?url=${encodeURIComponent(targetUrl)}`;
 }
 
 export default function Auth() {
@@ -16,13 +21,23 @@ export default function Auth() {
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const hasInjectedWallet =
     typeof window !== 'undefined' && !!(window as any).ethereum?.request;
 
   const openInBaseApp = () => {
     const target = window.location.href;
-    window.location.href = getBaseAppDappLink(target);
+    const deepLink = getBaseAppDeepLink(target);
+    
+    // Try native deep link first
+    window.location.href = deepLink;
+    
+    // If deep link doesn't work after a short delay, show install prompt
+    setTimeout(() => {
+      // If we're still on this page, the deep link likely failed
+      setShowInstallPrompt(true);
+    }, 2500);
   };
 
   const handleBaseSignIn = async () => {
@@ -230,11 +245,13 @@ export default function Auth() {
                   <span>Wallet signature verification enabled</span>
                 </div>
 
-                {/* Download Base App CTA */}
-                {!isBaseAppDetected && (
+                {/* Download Base App CTA - show if Base not detected or if deep link failed */}
+                {(!isBaseAppDetected || showInstallPrompt) && (
                   <div className="text-center pt-2 border-t border-border">
                     <p className="text-xs text-muted-foreground mb-3 mt-4">
-                      Don't have Base App yet?
+                      {showInstallPrompt 
+                        ? "Base App not found. Install it to continue:" 
+                        : "Don't have Base App yet?"}
                     </p>
                     <a
                       href="https://base.app/invite/imanafrikah/WTL0V0H3"
