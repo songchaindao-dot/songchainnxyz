@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// AppContent must be rendered inside AuthProvider
 function AppContent() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
 
