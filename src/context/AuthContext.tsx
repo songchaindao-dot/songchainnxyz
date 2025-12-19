@@ -35,9 +35,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isBaseAppDetected, setIsBaseAppDetected] = useState(false);
 
-  // Check for Base App on mount
+  // Check for Base App (and keep it fresh when the app regains focus)
   useEffect(() => {
-    setIsBaseAppDetected(isBaseAppAvailable());
+    const update = () => setIsBaseAppDetected(isBaseAppAvailable());
+
+    update();
+
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('focus', update);
+    document.addEventListener('visibilitychange', update);
+
+    return () => {
+      window.removeEventListener('focus', update);
+      document.removeEventListener('visibilitychange', update);
+    };
   }, []);
 
   const fetchUserRole = async (userId: string) => {
@@ -135,10 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signInWithBase = useCallback(async () => {
     try {
-      // Require Base App to be detected - no bypass allowed
-      if (!isBaseAppDetected) {
-        return { 
-          error: new Error('Base App not detected. Please install Base App to continue.') 
+      // Require Base App to be available (fresh check at click-time)
+      if (!isBaseAppAvailable()) {
+        return {
+          error: new Error('Base App not detected. Please open this site inside Base App to continue.'),
         };
       }
       
@@ -191,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Base App sign-in error:', err);
       return { error: new Error('Base App connection failed. Please try again.') };
     }
-  }, [isBaseAppDetected]);
+  }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
