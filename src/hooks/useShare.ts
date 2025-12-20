@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShareOptions {
   title: string;
@@ -69,6 +70,16 @@ export function useShare() {
 
   const shareSong = useCallback(async (songTitle: string, artistName: string, songId: string) => {
     const url = getShareUrl('song', songId);
+    
+    // Track share event for popularity ranking
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      supabase.from('song_analytics').insert({
+        song_id: songId,
+        user_id: user?.id || null,
+        event_type: 'share'
+      }).then(() => {});
+    });
+    
     return nativeShare({
       title: `${songTitle} - ${artistName}`,
       text: `Check out "${songTitle}" by ${artistName} on $ongChainn!`,
