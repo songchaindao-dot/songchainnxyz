@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Headphones } from 'lucide-react';
+import { Sparkles, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -7,6 +7,7 @@ import { EngagementPanel } from '@/components/EngagementPanel';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
+import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -120,17 +121,7 @@ export default function Home() {
           >
             {/* Featured Songs */}
             <motion.section variants={itemVariants}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-xl gradient-primary">
-                  <TrendingUp className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <h2 className="font-heading text-2xl font-semibold text-foreground">Featured Tracks</h2>
-              </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                {featuredSongs.map((song, index) => (
-                  <SongCard key={song.id} song={song} index={index} variant="featured" />
-                ))}
-              </div>
+              <FeaturedTracksSection songs={featuredSongs} />
             </motion.section>
 
             {/* All Songs */}
