@@ -32,7 +32,7 @@ export function AuthGate({ onLogin }: AuthGateProps) {
           >
             <img 
               src={logo} 
-              alt="SongChainn" 
+              alt="$ongChainn" 
               className="w-32 h-32 mx-auto object-contain animate-float"
             />
           </motion.div>
@@ -44,7 +44,7 @@ export function AuthGate({ onLogin }: AuthGateProps) {
             transition={{ delay: 0.3 }}
           >
             <h1 className="font-heading text-4xl font-bold text-foreground mb-2">
-              SongChainn
+              $ongChainn
             </h1>
             <p className="text-primary font-medium mb-2">Audience Edition · Phase One</p>
             <p className="text-muted-foreground text-sm mb-8">
@@ -67,7 +67,7 @@ export function AuthGate({ onLogin }: AuthGateProps) {
             </div>
             
             <p className="text-sm text-muted-foreground mb-5 leading-relaxed px-1">
-              SongChainn is built on Base. Base App is required to access the platform and participate in the audience experience.
+              $ongChainn is built on Base. Base App is required to access the platform and participate in the audience experience.
             </p>
 
             {/* Features */}
