@@ -23,9 +23,11 @@ export function PullToRefresh({ children, onRefresh, className = '' }: PullToRef
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const container = containerRef.current;
     if (!container || isRefreshing) return;
-    
-    // Only start pull if at top of scroll
-    if (container.scrollTop <= 0) {
+
+    const isAtTop = container.scrollTop <= 0 && (typeof window === 'undefined' || window.scrollY <= 0);
+
+    // Only start pull if at very top
+    if (isAtTop) {
       startY.current = e.touches[0].clientY;
       setIsPulling(true);
     }
@@ -33,9 +35,12 @@ export function PullToRefresh({ children, onRefresh, className = '' }: PullToRef
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isPulling || isRefreshing) return;
-    
+
     const container = containerRef.current;
-    if (!container || container.scrollTop > 0) {
+    const isAtTop = !!container && container.scrollTop <= 0 && (typeof window === 'undefined' || window.scrollY <= 0);
+
+    // If user isn't at the top anymore, stop pulling and let normal scrolling happen
+    if (!isAtTop) {
       setIsPulling(false);
       setPullDistance(0);
       return;
@@ -43,17 +48,19 @@ export function PullToRefresh({ children, onRefresh, className = '' }: PullToRef
 
     currentY.current = e.touches[0].clientY;
     const diff = currentY.current - startY.current;
-    
+
     if (diff > 0) {
       // Apply resistance curve for more natural feel
       const resistance = 0.5;
       const distance = Math.min(diff * resistance, MAX_PULL);
       setPullDistance(distance);
-      
-      // Prevent default scroll when pulling
+
+      // Prevent default scroll when actively pulling down
       if (distance > 10) {
         e.preventDefault();
       }
+    } else {
+      setPullDistance(0);
     }
   }, [isPulling, isRefreshing]);
 
