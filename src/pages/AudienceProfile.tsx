@@ -21,7 +21,7 @@ import { PostCard } from '@/components/social/PostCard';
 import { useSocial } from '@/hooks/useSocial';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { AudienceProfile as AudienceProfileType } from '@/types/database';
+import { AudienceProfile as AudienceProfileType } from '@/types/social';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
