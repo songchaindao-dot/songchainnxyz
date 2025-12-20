@@ -43,7 +43,6 @@ const FullScreenVideoArt = memo(function FullScreenVideoArt({ isPlaying }: { isP
       />
       <ImmersiveVisualizer isPlaying={isPlaying} />
     </div>
-    />
   );
 });
 
