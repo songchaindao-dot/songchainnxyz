@@ -39,6 +39,15 @@ export interface PostComment {
   content: string;
   created_at: string;
   profile?: AudienceProfile;
+  likes_count?: number;
+  is_liked?: boolean;
+}
+
+export interface CommentLike {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  created_at: string;
 }
 
 export interface PlaylistCollaborator {
