@@ -66,29 +66,39 @@ export function isBaseAppAvailable(): boolean {
 }
 
 /**
- * Get the Base App provider
+ * Get the Base App provider - ONLY returns Base/Coinbase wallet, never MetaMask or others
  */
 function getBaseProvider(): BaseProvider | null {
   if (!hasInjectedEthereum()) return null;
 
   const ethereum = (window as any).ethereum;
   const isProvider = (p: any) => p && typeof p.request === "function";
+  const isBaseOrCoinbase = (p: any) => p?.isBaseApp || p?.isCoinbaseWallet;
 
-  // If multiple wallets are injected, prefer Base/Coinbase provider.
+  // If multiple wallets are injected, ONLY use Base/Coinbase provider
   if (Array.isArray(ethereum.providers)) {
-    const preferred = ethereum.providers.find(
-      (p: any) => (p?.isBaseApp || p?.isCoinbaseWallet) && isProvider(p)
+    const baseProvider = ethereum.providers.find(
+      (p: any) => isBaseOrCoinbase(p) && isProvider(p)
     );
-    if (preferred) return preferred as BaseProvider;
+    if (baseProvider) return baseProvider as BaseProvider;
 
-    // If we're in Coinbase/Base in-app browser but flags are missing, pick first usable provider.
+    // If we're in Coinbase/Base in-app browser, the provider should work
     if (isCoinbaseInAppBrowser()) {
       const first = ethereum.providers.find((p: any) => isProvider(p));
       if (first) return first as BaseProvider;
     }
+    
+    // No Base wallet found in providers array
+    return null;
   }
 
-  return isProvider(ethereum) ? (ethereum as BaseProvider) : null;
+  // Single provider - only use if it's Base/Coinbase or we're in Base browser
+  if (isBaseOrCoinbase(ethereum) || isCoinbaseInAppBrowser()) {
+    return isProvider(ethereum) ? (ethereum as BaseProvider) : null;
+  }
+
+  // Not Base wallet (could be MetaMask etc.) - reject
+  return null;
 }
 
 /**
