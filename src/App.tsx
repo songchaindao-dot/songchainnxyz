@@ -14,6 +14,7 @@ import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Profile from "./pages/Profile";
+import Social from "./pages/Social";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ function AppContent() {
             <Route path="/artist/:id" element={<ArtistDetail />} />
             <Route path="/education" element={<Education />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/social" element={<Social />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
