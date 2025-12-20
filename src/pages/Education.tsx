@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Link as LinkIcon, Shield, Zap, Users, Music } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
@@ -154,13 +155,13 @@ export default function Education() {
           <p className="text-muted-foreground mb-4">
             Ready to start building your listening history?
           </p>
-          <a 
-            href="/"
+          <Link 
+            to="/"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-medium shadow-glow hover:scale-105 transition-transform"
           >
             <Music className="w-4 h-4" />
             Start Listening
-          </a>
+          </Link>
         </motion.div>
       </main>
 
