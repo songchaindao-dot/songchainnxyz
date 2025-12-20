@@ -11,6 +11,7 @@ import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
 import { usePlayerActions } from '@/context/PlayerContext';
+import { NotificationPromptBanner } from '@/components/NotificationPromptBanner';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -52,6 +53,9 @@ export default function Home() {
       <Navigation />
 
       <main className="container mx-auto px-4 py-8 relative z-10">
+        {/* Notification Prompt Banner */}
+        <NotificationPromptBanner />
+
         {/* Hero Section */}
         <motion.section
           initial={{ opacity: 0, y: 30 }}
