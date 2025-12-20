@@ -1,8 +1,9 @@
 import { memo, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check, MessageCircle, Link2 } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check, MessageCircle, Link2, Download, Loader2 } from 'lucide-react';
 import { usePlayerState, usePlayerActions, usePlayerTime } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
+import { useOfflineMusic } from '@/hooks/useOfflineMusic';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useShare } from '@/hooks/useShare';
@@ -59,12 +60,15 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
   const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
 
   const { toggleLike, isLiked } = useEngagement();
+  const { isOffline, isCaching, toggleOffline } = useOfflineMusic();
   const { copied, shareSong, copyToClipboard, shareToX, getShareUrl } = useShare();
   const [showQueue, setShowQueue] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [shuffle, setShuffle] = useState(false);
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
+  const offline = currentSong ? isOffline(currentSong.id) : false;
+  const caching = currentSong ? isCaching(currentSong.id) : false;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handleNativeShare = async () => {
@@ -336,6 +340,24 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
                   )}
                 >
                   <Heart className={cn("w-5 h-5", liked && "fill-current")} />
+                </button>
+
+                {/* Download for offline */}
+                <button
+                  onClick={() => toggleOffline(currentSong)}
+                  disabled={caching}
+                  className={cn(
+                    "p-3 rounded-full glass transition-all press-effect",
+                    offline ? "bg-primary/20 text-primary" : "hover:bg-secondary/50 text-muted-foreground"
+                  )}
+                >
+                  {caching ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : offline ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <Download className="w-5 h-5" />
+                  )}
                 </button>
 
                 {/* Volume */}
