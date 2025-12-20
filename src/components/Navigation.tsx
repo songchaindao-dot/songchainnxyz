@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift, Compass } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.webp';
@@ -10,7 +10,8 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { InviteFriends } from '@/components/InviteFriends';
 
 const navItems = [
-  { path: '/', label: 'Discover', icon: Home },
+  { path: '/', label: 'Home', icon: Home },
+  { path: '/discover', label: 'Discover', icon: Compass },
   { path: '/artists', label: 'Artists', icon: Users },
   { path: '/social', label: 'Social', icon: MessageCircle },
   { path: '/education', label: 'Learn', icon: BookOpen },
