@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
+import { useRankedSongs, useRankedArtists } from '@/hooks/usePopularity';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
 import { EngagementPanel } from '@/components/EngagementPanel';
@@ -27,8 +28,11 @@ const itemVariants = {
 };
 
 export default function Home() {
-  const featuredSongs = SONGS.slice(0, 3);
-  const allSongs = SONGS;
+  const { rankedSongs } = useRankedSongs();
+  const { rankedArtists } = useRankedArtists();
+  
+  const featuredSongs = rankedSongs.slice(0, 3);
+  const allSongs = rankedSongs;
 
   return (
     <div className="min-h-screen bg-background pb-24 relative">
@@ -138,11 +142,11 @@ export default function Home() {
               </div>
             </motion.section>
 
-            {/* Artists Preview */}
+            {/* Artists Preview - Ranked by popularity */}
             <motion.section variants={itemVariants}>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">Town Square Artists</h2>
+              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">Top Artists</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {ARTISTS.slice(0, 4).map((artist, index) => (
+                {rankedArtists.slice(0, 4).map((artist, index) => (
                   <ArtistCard key={artist.id} artist={artist} index={index} />
                 ))}
               </div>
