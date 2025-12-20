@@ -1,8 +1,8 @@
-import { motion } from 'framer-motion';
+import { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import songArtVideo from '@/assets/song-art.mp4';
 
-interface SpinningSongArtProps {
+interface SongArtProps {
   isPlaying?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
@@ -15,28 +15,35 @@ const sizeClasses = {
   xl: 'w-full h-full',
 };
 
-export function SpinningSongArt({ isPlaying = false, size = 'md', className }: SpinningSongArtProps) {
+export function SpinningSongArt({ isPlaying = false, size = 'md', className }: SongArtProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
   return (
-    <motion.div
+    <div
       className={cn(
         'rounded-xl overflow-hidden flex-shrink-0',
         sizeClasses[size],
         className
       )}
-      animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
-      transition={isPlaying ? { duration: 8, repeat: Infinity, ease: 'linear' } : { duration: 0.3 }}
     >
       <video
+        ref={videoRef}
         src={songArtVideo}
-        autoPlay
         loop
         muted
         playsInline
         className="w-full h-full object-cover"
-        style={{ 
-          animationPlayState: isPlaying ? 'running' : 'paused',
-        }}
       />
-    </motion.div>
+    </div>
   );
 }
