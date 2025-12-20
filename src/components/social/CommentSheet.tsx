@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Heart, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PostComment } from '@/types/social';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 interface CommentSheetProps {
   isOpen: boolean;
@@ -116,17 +117,23 @@ export function CommentSheet({
                               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                             </span>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast({ title: 'More Options', description: 'Comment options coming soon.' })}>
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
                         <p className="text-sm text-foreground/90 mt-1">{comment.content}</p>
                         <div className="flex items-center gap-4 mt-2">
-                          <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                          <button 
+                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => toast({ title: 'Liked!', description: 'Comment likes coming soon.' })}
+                          >
                             <Heart className="w-4 h-4" />
                             <span className="text-xs">Like</span>
                           </button>
-                          <button className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          <button 
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => toast({ title: 'Reply', description: 'Comment replies coming soon.' })}
+                          >
                             Reply
                           </button>
                         </div>

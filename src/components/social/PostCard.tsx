@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Share2, Play, Trash2, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Trash2, MoreHorizontal, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SocialPostWithProfile, PostComment } from '@/types/social';
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShare } from '@/hooks/useShare';
 
 interface PostCardProps {
   post: SocialPostWithProfile;
@@ -37,6 +38,7 @@ export function PostCard({
 }: PostCardProps) {
   const { user } = useAuth();
   const { playSong } = usePlayer();
+  const { sharePost, shareSong, copied, getShareUrl, copyToClipboard, shareToX } = useShare();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -45,6 +47,27 @@ export function PostCard({
   const song = post.song_id ? SONGS.find(s => s.id === post.song_id) : null;
   const artist = song ? ARTISTS.find(a => a.id === song.artistId) : null;
   const isOwnPost = user?.id === post.user_id;
+
+  const handleShare = () => {
+    if (song && artist) {
+      shareSong(song.title, artist.name, song.id);
+    } else {
+      sharePost(post.id, post.content || undefined);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    copyToClipboard(url);
+  };
+
+  const handleShareToX = () => {
+    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const text = song && artist 
+      ? `🎵 Listening to "${song.title}" by ${artist.name} on @SongChainn\n\n`
+      : `Check out this post on @SongChainn\n\n`;
+    shareToX(text, url);
+  };
 
   const handleToggleComments = async () => {
     if (!showComments) {
@@ -171,9 +194,29 @@ export function PostCard({
           <MessageCircle className="w-4 h-4" />
           {post.comments_count > 0 && post.comments_count}
         </Button>
-        <Button variant="ghost" size="sm" className="gap-1">
-          <Share2 className="w-4 h-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1">
+              <Share2 className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleShare} className="gap-2">
+              <Share2 className="w-4 h-4" />
+              Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              Copy Link
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShareToX} className="gap-2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Share on X
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Comments Section */}

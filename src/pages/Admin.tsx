@@ -7,6 +7,7 @@ import { ARTISTS, SONGS, Artist, Song } from '@/data/musicData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
 import logo from '@/assets/songchainn-logo.png';
 
 // Simulated admin authentication
@@ -150,7 +151,7 @@ export default function Admin() {
                 <h2 className="font-heading text-xl font-semibold text-foreground">
                   Manage Artists
                 </h2>
-                <Button size="sm" className="gradient-primary">
+                <Button size="sm" className="gradient-primary" onClick={() => toast({ title: 'Add Artist', description: 'Artist management coming in next update.' })}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Artist
                 </Button>
@@ -185,10 +186,10 @@ export default function Admin() {
                         <td className="px-4 py-3 text-muted-foreground">{artist.songs.length}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost">
+                            <Button size="sm" variant="ghost" onClick={() => toast({ title: 'Edit Artist', description: 'Artist editing coming soon.' })}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive">
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => toast({ title: 'Delete Artist', description: 'Artist deletion coming soon.', variant: 'destructive' })}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -208,7 +209,7 @@ export default function Admin() {
                 <h2 className="font-heading text-xl font-semibold text-foreground">
                   Manage Songs
                 </h2>
-                <Button size="sm" className="gradient-primary">
+                <Button size="sm" className="gradient-primary" onClick={() => toast({ title: 'Upload Song', description: 'Song upload coming in next update.' })}>
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Song
                 </Button>
@@ -234,10 +235,10 @@ export default function Admin() {
                         <td className="px-4 py-3 text-muted-foreground">{song.likes.toLocaleString()}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost">
+                            <Button size="sm" variant="ghost" onClick={() => toast({ title: 'Edit Song', description: 'Song editing coming soon.' })}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive">
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => toast({ title: 'Delete Song', description: 'Song deletion coming soon.', variant: 'destructive' })}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
