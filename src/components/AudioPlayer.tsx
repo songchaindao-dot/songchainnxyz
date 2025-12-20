@@ -1,9 +1,9 @@
+import { memo, useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, ChevronUp } from 'lucide-react';
-import { usePlayer } from '@/context/PlayerContext';
+import { usePlayerState, usePlayerActions, usePlayerTime } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
-import { useEffect, useRef, useState } from 'react';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { SpinningSongArt } from './SpinningSongArt';
 
@@ -14,21 +14,60 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function AudioPlayer() {
-  const {
-    currentSong,
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    togglePlay,
-    seekTo,
-    setVolume,
-    playNext,
-    playPrevious,
-  } = usePlayer();
+// Memoized progress bar component - only re-renders on time changes
+const ProgressBar = memo(function ProgressBar({ 
+  currentTime, 
+  duration, 
+  onSeek 
+}: { 
+  currentTime: number; 
+  duration: number; 
+  onSeek: (time: number) => void;
+}) {
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    onSeek(percent * duration);
+  }, [duration, onSeek]);
 
+  return (
+    <div
+      className="absolute top-0 left-0 right-0 h-1 bg-muted/30 cursor-pointer group"
+      onClick={handleClick}
+    >
+      <div
+        className="h-full gradient-primary relative"
+        style={{ width: `${progress}%` }}
+      >
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary shadow-glow opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </div>
+  );
+});
+
+// Memoized time display
+const TimeDisplay = memo(function TimeDisplay({ 
+  currentTime, 
+  duration 
+}: { 
+  currentTime: number; 
+  duration: number;
+}) {
+  return (
+    <span className="text-xs text-muted-foreground w-20 text-right tabular-nums">
+      {formatTime(currentTime)} / {formatTime(duration)}
+    </span>
+  );
+});
+
+export const AudioPlayer = memo(function AudioPlayer() {
+  const { currentSong, isPlaying } = usePlayerState();
+  const { currentTime, duration } = usePlayerTime();
+  const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
   const { addPlay } = useEngagement();
+  
   const hasCountedPlay = useRef(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
@@ -37,7 +76,7 @@ export function AudioPlayer() {
       addPlay(currentSong.id);
       hasCountedPlay.current = true;
     }
-  }, [currentSong?.id]);
+  }, [currentSong?.id, addPlay]);
 
   useEffect(() => {
     hasCountedPlay.current = false;
@@ -68,9 +107,23 @@ export function AudioPlayer() {
     }
   }, [isPlaying]);
 
-  if (!currentSong) return null;
+  const handleVolumeToggle = useCallback(() => {
+    setVolume(volume === 0 ? 0.8 : 0);
+  }, [volume, setVolume]);
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const handleVolumeChange = useCallback(([v]: number[]) => {
+    setVolume(v / 100);
+  }, [setVolume]);
+
+  const handleOpenFullScreen = useCallback(() => {
+    setIsFullScreen(true);
+  }, []);
+
+  const handleCloseFullScreen = useCallback(() => {
+    setIsFullScreen(false);
+  }, []);
+
+  if (!currentSong) return null;
 
   return (
     <>
@@ -81,30 +134,13 @@ export function AudioPlayer() {
       >
         {/* Glass background */}
         <div className="glass-surface border-t border-border/50">
-          {/* Progress bar - clickable */}
-          <div
-            className="absolute top-0 left-0 right-0 h-1 bg-muted/30 cursor-pointer group"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const percent = (e.clientX - rect.left) / rect.width;
-              seekTo(percent * duration);
-            }}
-          >
-            <motion.div
-              className="h-full gradient-primary relative"
-              style={{ width: `${progress}%` }}
-              layoutId="progress"
-            >
-              {/* Glow effect on progress */}
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary shadow-glow opacity-0 group-hover:opacity-100 transition-opacity" />
-            </motion.div>
-          </div>
+          <ProgressBar currentTime={currentTime} duration={duration} onSeek={seekTo} />
 
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               {/* Song info - clickable to expand */}
               <button
-                onClick={() => setIsFullScreen(true)}
+                onClick={handleOpenFullScreen}
                 className="flex items-center gap-3 min-w-0 flex-1 text-left group"
               >
                 <div className="relative flex-shrink-0">
@@ -151,13 +187,11 @@ export function AudioPlayer() {
 
               {/* Time & Volume */}
               <div className="hidden sm:flex items-center gap-4 flex-1 justify-end">
-                <span className="text-xs text-muted-foreground w-20 text-right tabular-nums">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </span>
+                <TimeDisplay currentTime={currentTime} duration={duration} />
 
                 <div className="flex items-center gap-2 w-28">
                   <button
-                    onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                    onClick={handleVolumeToggle}
                     className="p-1 hover:bg-secondary/80 rounded transition-colors"
                   >
                     {volume === 0 ? (
@@ -168,7 +202,7 @@ export function AudioPlayer() {
                   </button>
                   <Slider
                     value={[volume * 100]}
-                    onValueChange={([v]) => setVolume(v / 100)}
+                    onValueChange={handleVolumeChange}
                     max={100}
                     step={1}
                     className="w-20"
@@ -181,7 +215,7 @@ export function AudioPlayer() {
       </motion.div>
 
       {/* Full Screen Player */}
-      <FullScreenPlayer isOpen={isFullScreen} onClose={() => setIsFullScreen(false)} />
+      <FullScreenPlayer isOpen={isFullScreen} onClose={handleCloseFullScreen} />
     </>
   );
-}
+});

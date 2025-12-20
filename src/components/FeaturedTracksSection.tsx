@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Sparkles, Music, Zap } from 'lucide-react';
 import { Song } from '@/data/musicData';
@@ -7,31 +8,8 @@ interface FeaturedTracksSectionProps {
   songs: Song[];
 }
 
-// Floating particle component
-function FloatingParticle({ delay = 0, size = 4, color = 'primary' }: { delay?: number; size?: number; color?: string }) {
-  return (
-    <motion.div
-      className={`absolute rounded-full ${color === 'primary' ? 'bg-primary/40' : 'bg-cyan-400/30'}`}
-      style={{ width: size, height: size }}
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        opacity: [0, 1, 0],
-        scale: [0, 1.5, 0],
-        y: [0, -100, -200],
-        x: [0, Math.random() * 40 - 20, Math.random() * 60 - 30],
-      }}
-      transition={{
-        duration: 4,
-        delay,
-        repeat: Infinity,
-        ease: 'easeOut',
-      }}
-    />
-  );
-}
-
-// Music wave visualizer
-function MusicWaveVisualizer() {
+// Simplified music wave visualizer - less animations
+const MusicWaveVisualizer = memo(function MusicWaveVisualizer() {
   return (
     <div className="flex items-end gap-1 h-8">
       {[...Array(5)].map((_, i) => (
@@ -51,9 +29,9 @@ function MusicWaveVisualizer() {
       ))}
     </div>
   );
-}
+});
 
-export function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
+export const FeaturedTracksSection = memo(function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}
@@ -61,82 +39,33 @@ export function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
       transition={{ duration: 0.5 }}
       className="relative"
     >
-      {/* Background glow effects */}
+      {/* Simplified background glow - reduced animations */}
       <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
-        {/* Main gradient orb */}
-        <motion.div
-          className="absolute -top-20 -left-20 w-[400px] h-[400px]"
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-        >
+        <div className="absolute -top-20 -left-20 w-[400px] h-[400px]">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-cyan-500/10 to-transparent blur-[80px]" />
-        </motion.div>
-
-        {/* Secondary orb */}
-        <motion.div
-          className="absolute -bottom-10 -right-10 w-[300px] h-[300px]"
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, 30, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          <div className="absolute inset-0 rounded-full bg-gradient-to-tl from-cyan-400/15 via-primary/10 to-transparent blur-[60px]" />
-        </motion.div>
-
-        {/* Floating particles */}
-        <div className="absolute bottom-0 left-1/4">
-          {[...Array(8)].map((_, i) => (
-            <FloatingParticle key={i} delay={i * 0.5} size={3 + Math.random() * 4} color={i % 2 === 0 ? 'primary' : 'cyan'} />
-          ))}
         </div>
-        <div className="absolute bottom-0 right-1/4">
-          {[...Array(6)].map((_, i) => (
-            <FloatingParticle key={i} delay={i * 0.7 + 0.3} size={2 + Math.random() * 3} color={i % 2 === 0 ? 'cyan' : 'primary'} />
-          ))}
+        <div className="absolute -bottom-10 -right-10 w-[300px] h-[300px]">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-tl from-cyan-400/15 via-primary/10 to-transparent blur-[60px]" />
         </div>
       </div>
 
       {/* Header with enhanced styling */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          {/* Animated icon container */}
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            className="relative"
-          >
-            <motion.div
-              className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 blur-lg opacity-50"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
+          {/* Simplified icon container */}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 blur-lg opacity-50" />
             <div className="relative p-3 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 shadow-glow">
               <TrendingUp className="w-6 h-6 text-primary-foreground" />
             </div>
-          </motion.div>
+          </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
                 Featured Tracks
               </h2>
-              <motion.div
-                animate={{ rotate: [0, 15, -15, 0] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-              >
-                <Sparkles className="w-5 h-5 text-primary" />
-              </motion.div>
+              <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground mt-1">Trending in Livingstone Town Square</p>
           </div>
@@ -158,21 +87,16 @@ export function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
         </motion.div>
       </div>
 
-      {/* Featured cards container with glass effect */}
+      {/* Featured cards container */}
       <div className="relative">
         {/* Decorative elements */}
-        <motion.div
-          className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-primary/20"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-primary/20">
           <Zap className="w-3 h-3 text-primary" />
           <span className="text-xs text-primary font-medium">Hot This Week</span>
           <Zap className="w-3 h-3 text-primary" />
-        </motion.div>
+        </div>
 
-        {/* Cards grid with staggered animation */}
+        {/* Cards grid */}
         <div className="grid md:grid-cols-3 gap-6 pt-4">
           {songs.map((song, index) => (
             <motion.div
@@ -180,30 +104,22 @@ export function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{
-                delay: index * 0.15,
-                duration: 0.5,
+                delay: index * 0.1,
+                duration: 0.4,
                 type: 'spring',
                 stiffness: 100,
               }}
-              whileHover={{ y: -8, transition: { duration: 0.2 } }}
               className="relative group"
             >
               {/* Card glow on hover */}
-              <motion.div
-                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 to-cyan-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10"
-              />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 to-cyan-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
               
               {/* Rank badge */}
-              <motion.div
-                className="absolute -top-3 -left-3 z-20"
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.5 + index * 0.15, type: 'spring' }}
-              >
+              <div className="absolute -top-3 -left-3 z-20">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-glow-intense">
                   <span className="text-xs font-bold text-primary-foreground">#{index + 1}</span>
                 </div>
-              </motion.div>
+              </div>
 
               <SongCard song={song} index={index} variant="featured" />
             </motion.div>
@@ -211,37 +127,21 @@ export function FeaturedTracksSection({ songs }: FeaturedTracksSectionProps) {
         </div>
 
         {/* Bottom decorative line */}
-        <motion.div
-          className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-primary/30 to-transparent"
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
-        />
+        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       </div>
 
-      {/* Floating music notes decoration */}
+      {/* Simplified floating music notes */}
       <div className="absolute top-1/2 right-0 -translate-y-1/2 pointer-events-none">
         {[...Array(3)].map((_, i) => (
-          <motion.div
+          <div
             key={i}
-            className="absolute"
+            className="absolute opacity-30"
             style={{ right: i * 20, top: i * -30 }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.3, 0.6, 0.3],
-              rotate: [0, 10, -10, 0],
-            }}
-            transition={{
-              duration: 3,
-              delay: i * 0.5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
           >
             <Music className="w-4 h-4 text-primary/40" />
-          </motion.div>
+          </div>
         ))}
       </div>
     </motion.section>
   );
-}
+});

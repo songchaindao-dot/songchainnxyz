@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Music } from 'lucide-react';
 import { Artist, SONGS } from '@/data/musicData';
@@ -8,9 +9,13 @@ interface ArtistCardProps {
   index?: number;
 }
 
-export function ArtistCard({ artist, index = 0 }: ArtistCardProps) {
-  const artistSongs = SONGS.filter(s => s.artistId === artist.id);
-  const totalPlays = artistSongs.reduce((sum, s) => sum + s.plays, 0);
+export const ArtistCard = memo(function ArtistCard({ artist, index = 0 }: ArtistCardProps) {
+  // Memoize expensive calculations
+  const { artistSongs, totalPlays } = useMemo(() => {
+    const songs = SONGS.filter(s => s.artistId === artist.id);
+    const plays = songs.reduce((sum, s) => sum + s.plays, 0);
+    return { artistSongs: songs, totalPlays: plays };
+  }, [artist.id]);
 
   return (
     <Link to={`/artist/${artist.id}`}>
@@ -27,33 +32,26 @@ export function ArtistCard({ artist, index = 0 }: ArtistCardProps) {
               src={artist.profileImage} 
               alt={artist.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
             />
           ) : (
             <>
               <div className="absolute inset-0 gradient-primary opacity-20 group-hover:opacity-30 transition-opacity" />
               
-              {/* Animated gradient background */}
-              <motion.div
+              {/* Simplified gradient background - removed heavy animation */}
+              <div
                 className="absolute inset-0"
                 style={{
                   background: 'radial-gradient(circle at 50% 50%, hsl(217 91% 60% / 0.2) 0%, transparent 60%)',
                 }}
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               />
 
               <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  className="w-20 h-20 rounded-full glass flex items-center justify-center shadow-glow transition-all duration-300"
-                >
+                <div className="w-20 h-20 rounded-full glass flex items-center justify-center shadow-glow transition-all duration-300 group-hover:scale-110">
                   <span className="text-3xl font-heading font-bold text-foreground">
                     {artist.name.charAt(0)}
                   </span>
-                </motion.div>
+                </div>
               </div>
             </>
           )}
@@ -84,4 +82,4 @@ export function ArtistCard({ artist, index = 0 }: ArtistCardProps) {
       </motion.div>
     </Link>
   );
-}
+});
