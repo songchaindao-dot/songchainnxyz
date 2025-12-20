@@ -1,0 +1,98 @@
+import { useState, useCallback } from 'react';
+import { toast } from '@/hooks/use-toast';
+
+interface ShareOptions {
+  title: string;
+  text: string;
+  url: string;
+}
+
+export function useShare() {
+  const [copied, setCopied] = useState(false);
+
+  const getShareUrl = useCallback((type: 'song' | 'post' | 'artist' | 'profile', id: string) => {
+    const baseUrl = window.location.origin;
+    switch (type) {
+      case 'song':
+        return `${baseUrl}/?song=${id}`;
+      case 'post':
+        return `${baseUrl}/social?post=${id}`;
+      case 'artist':
+        return `${baseUrl}/artist/${id}`;
+      case 'profile':
+        return `${baseUrl}/audience/${id}`;
+      default:
+        return baseUrl;
+    }
+  }, []);
+
+  const copyToClipboard = useCallback(async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({ title: 'Link copied to clipboard!' });
+      setTimeout(() => setCopied(false), 2000);
+      return true;
+    } catch {
+      toast({ title: 'Failed to copy link', variant: 'destructive' });
+      return false;
+    }
+  }, []);
+
+  const nativeShare = useCallback(async (options: ShareOptions) => {
+    if (navigator.share) {
+      try {
+        await navigator.share(options);
+        return true;
+      } catch {
+        // User cancelled or error - fallback to copy
+        return copyToClipboard(options.url);
+      }
+    } else {
+      return copyToClipboard(options.url);
+    }
+  }, [copyToClipboard]);
+
+  const shareToX = useCallback((text: string, url: string) => {
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(tweetUrl, '_blank', 'width=600,height=400');
+  }, []);
+
+  const sharePost = useCallback(async (postId: string, content?: string) => {
+    const url = getShareUrl('post', postId);
+    return nativeShare({
+      title: 'Check out this post on SongChainn!',
+      text: content || 'Check out this post on SongChainn!',
+      url,
+    });
+  }, [getShareUrl, nativeShare]);
+
+  const shareSong = useCallback(async (songTitle: string, artistName: string, songId: string) => {
+    const url = getShareUrl('song', songId);
+    return nativeShare({
+      title: `${songTitle} - ${artistName}`,
+      text: `Check out "${songTitle}" by ${artistName} on SongChainn!`,
+      url,
+    });
+  }, [getShareUrl, nativeShare]);
+
+  const shareProfile = useCallback(async (profileName: string, userId: string) => {
+    const url = getShareUrl('profile', userId);
+    return nativeShare({
+      title: `${profileName} on SongChainn`,
+      text: `Check out ${profileName}'s profile on SongChainn!`,
+      url,
+    });
+  }, [getShareUrl, nativeShare]);
+
+  return {
+    copied,
+    getShareUrl,
+    copyToClipboard,
+    nativeShare,
+    shareToX,
+    sharePost,
+    shareSong,
+    shareProfile,
+  };
+}

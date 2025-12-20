@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AudienceProfile as AudienceProfileType } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 export default function AudienceProfile() {
   const { userId } = useParams<{ userId: string }>();
@@ -237,7 +238,7 @@ export default function AudienceProfile() {
               >
                 {amFollowing ? 'Following' : 'Follow'}
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => toast({ title: 'Direct Messages', description: 'Messaging feature coming soon!' })}>
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Message
               </Button>

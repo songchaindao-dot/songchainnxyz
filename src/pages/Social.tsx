@@ -234,9 +234,9 @@ export default function Social() {
       {/* Main Feed - Vertical Scroll Snap */}
       <div 
         ref={feedRef}
-        className="flex-1 overflow-y-auto snap-y snap-mandatory scroll-smooth"
+        className="flex-1 overflow-y-auto snap-y snap-mandatory scroll-smooth scroll-smooth-gpu fast-tap"
         onScroll={handleScroll}
-        style={{ scrollSnapType: 'y mandatory' }}
+        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
       >
         {isLoading ? (
           <div className="h-[calc(100vh-180px)] flex items-center justify-center">

@@ -7,21 +7,26 @@ import {
   Play, 
   Pause,
   Music,
-  Volume2,
-  VolumeX,
-  MoreHorizontal,
   UserPlus,
   Check,
-  Disc3
+  Disc3,
+  Copy,
+  Link
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SocialPostWithProfile, PostComment } from '@/types/social';
+import { SocialPostWithProfile } from '@/types/social';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { usePlayer } from '@/context/PlayerContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useShare } from '@/hooks/useShare';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import songArtVideo from '@/assets/song-art.mp4';
 
 interface MusicFeedCardProps {
@@ -44,14 +49,35 @@ export function MusicFeedCard({
   const { user } = useAuth();
   const { currentSong, isPlaying, playSong, pause, play } = usePlayer();
   const navigate = useNavigate();
+  const { sharePost, shareSong, copied, getShareUrl, copyToClipboard, shareToX } = useShare();
   const [showHeart, setShowHeart] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const song = post.song_id ? SONGS.find(s => s.id === post.song_id) : null;
   const artist = song ? ARTISTS.find(a => a.id === song.artistId) : null;
   const isOwnPost = user?.id === post.user_id;
   const isThisSongPlaying = currentSong?.id === song?.id && isPlaying;
+
+  const handleShare = () => {
+    if (song && artist) {
+      shareSong(song.title, artist.name, song.id);
+    } else {
+      sharePost(post.id, post.content || undefined);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    copyToClipboard(url);
+  };
+
+  const handleShareToX = () => {
+    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const text = song && artist 
+      ? `🎵 Listening to "${song.title}" by ${artist.name} on @SongChainn\n\n`
+      : `Check out this post on @SongChainn\n\n`;
+    shareToX(text, url);
+  };
 
   useEffect(() => {
     if (videoRef.current) {
@@ -215,12 +241,32 @@ export function MusicFeedCard({
         </button>
 
         {/* Share */}
-        <button className="flex flex-col items-center gap-1">
-          <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <Share2 className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-xs text-white font-medium">Share</span>
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                <Share2 className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xs text-white font-medium">Share</span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleShare} className="gap-2">
+              <Share2 className="w-4 h-4" />
+              Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              Copy Link
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShareToX} className="gap-2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              Share on X
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Disc Animation */}
         <motion.div
