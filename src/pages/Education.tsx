@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Link as LinkIcon, Shield, Zap, Users, Music } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
+import { AnimatedBackground } from '@/components/ui/animated-background';
 
 const educationTopics = [
   {
@@ -91,10 +92,11 @@ Each phase builds on proven audience behavior and community trust.`,
 
 export default function Education() {
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 relative">
+      <AnimatedBackground variant="default" />
       <Navigation />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
         {/* Header */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
