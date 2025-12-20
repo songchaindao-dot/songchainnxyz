@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { SocialPostWithProfile, PostComment, AudienceProfile } from '@/types/social';
+import { SocialPostWithProfile, PostComment } from '@/types/social';
+import { AudienceProfile } from '@/types/database';
 
 // Helper to create notifications
 const createNotificationRecord = async (

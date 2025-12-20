@@ -58,7 +58,7 @@ export default function Artists() {
           className="mt-12 p-6 rounded-2xl bg-card border border-border text-center"
         >
           <p className="text-sm text-muted-foreground">
-            All music on $ongChainn is curated for quality, originality, and cultural value. 
+            All music on SongChainn is curated for quality, originality, and cultural value. 
             Only artists who are part of Create On Base Town Squares can be featured.
           </p>
         </motion.div>

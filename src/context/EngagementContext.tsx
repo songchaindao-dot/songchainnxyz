@@ -27,49 +27,49 @@ const STREAK_BONUS = 25;
 
 export function EngagementProvider({ children }: { children: ReactNode }) {
   const [engagementPoints, setEngagementPoints] = useState(() => {
-    const saved = localStorage.getItem('$ongchainn_points');
+    const saved = localStorage.getItem('songchainn_points');
     return saved ? parseInt(saved, 10) : 0;
   });
   
   const [currentStreak, setCurrentStreak] = useState(() => {
-    const saved = localStorage.getItem('$ongchainn_streak');
+    const saved = localStorage.getItem('songchainn_streak');
     return saved ? parseInt(saved, 10) : 1;
   });
   
   const [todayPlays, setTodayPlays] = useState(() => {
-    const saved = localStorage.getItem('$ongchainn_today_plays');
+    const saved = localStorage.getItem('songchainn_today_plays');
     return saved ? parseInt(saved, 10) : 0;
   });
   
   const [totalPlays, setTotalPlays] = useState(() => {
-    const saved = localStorage.getItem('$ongchainn_total_plays');
+    const saved = localStorage.getItem('songchainn_total_plays');
     return saved ? parseInt(saved, 10) : 0;
   });
   
   const [likedSongs, setLikedSongs] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('$ongchainn_likes');
+    const saved = localStorage.getItem('songchainn_likes');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
   // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem('$ongchainn_points', engagementPoints.toString());
+    localStorage.setItem('songchainn_points', engagementPoints.toString());
   }, [engagementPoints]);
 
   useEffect(() => {
-    localStorage.setItem('$ongchainn_streak', currentStreak.toString());
+    localStorage.setItem('songchainn_streak', currentStreak.toString());
   }, [currentStreak]);
 
   useEffect(() => {
-    localStorage.setItem('$ongchainn_today_plays', todayPlays.toString());
+    localStorage.setItem('songchainn_today_plays', todayPlays.toString());
   }, [todayPlays]);
 
   useEffect(() => {
-    localStorage.setItem('$ongchainn_total_plays', totalPlays.toString());
+    localStorage.setItem('songchainn_total_plays', totalPlays.toString());
   }, [totalPlays]);
 
   useEffect(() => {
-    localStorage.setItem('$ongchainn_likes', JSON.stringify([...likedSongs]));
+    localStorage.setItem('songchainn_likes', JSON.stringify([...likedSongs]));
   }, [likedSongs]);
 
   const addPlay = useCallback((songId: string) => {

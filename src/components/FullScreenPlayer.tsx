@@ -1,19 +1,16 @@
 import { memo, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check, MessageCircle, Link2, Download, Loader2 } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check } from 'lucide-react';
 import { usePlayerState, usePlayerActions, usePlayerTime } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
-import { useOfflineMusic } from '@/hooks/useOfflineMusic';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useShare } from '@/hooks/useShare';
 import { toast } from '@/hooks/use-toast';
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import songArtVideo from '@/assets/song-art.mp4';
@@ -32,16 +29,14 @@ const FullScreenVideoArt = memo(function FullScreenVideoArt({ isPlaying }: { isP
   }, [isPlaying]);
 
   return (
-    <div className="relative w-full h-full">
-      <video
-        ref={videoRef}
-        src={songArtVideo}
-        loop
-        muted
-        playsInline
-        className="w-full h-full object-cover"
-      />
-    </div>
+    <video
+      ref={videoRef}
+      src={songArtVideo}
+      loop
+      muted
+      playsInline
+      className="w-full h-full object-cover"
+    />
   );
 });
 
@@ -63,15 +58,12 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
   const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
 
   const { toggleLike, isLiked } = useEngagement();
-  const { isOffline, isCaching, toggleOffline } = useOfflineMusic();
   const { copied, shareSong, copyToClipboard, shareToX, getShareUrl } = useShare();
   const [showQueue, setShowQueue] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [shuffle, setShuffle] = useState(false);
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
-  const offline = currentSong ? isOffline(currentSong.id) : false;
-  const caching = currentSong ? isCaching(currentSong.id) : false;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handleNativeShare = async () => {
@@ -92,21 +84,6 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
       const text = `🎵 Listening to "${currentSong.title}" by ${currentSong.artist} on @SongChainn`;
       const url = getShareUrl('song', currentSong.id);
       shareToX(text, url);
-    }
-  };
-
-  const handleShareToWhatsApp = () => {
-    if (currentSong) {
-      const url = getShareUrl('song', currentSong.id);
-      const text = `🎵 Check out "${currentSong.title}" by ${currentSong.artist} on SongChainn!\n${url}`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    }
-  };
-
-  const handleShareToFacebook = () => {
-    if (currentSong) {
-      const url = getShareUrl('song', currentSong.id);
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
     }
   };
 
@@ -345,24 +322,6 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
                   <Heart className={cn("w-5 h-5", liked && "fill-current")} />
                 </button>
 
-                {/* Download for offline */}
-                <button
-                  onClick={() => toggleOffline(currentSong)}
-                  disabled={caching}
-                  className={cn(
-                    "p-3 rounded-full glass transition-all press-effect",
-                    offline ? "bg-primary/20 text-primary" : "hover:bg-secondary/50 text-muted-foreground"
-                  )}
-                >
-                  {caching ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : offline ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <Download className="w-5 h-5" />
-                  )}
-                </button>
-
                 {/* Volume */}
                 <div className="flex items-center gap-2 flex-1 max-w-[140px]">
                   <button
@@ -390,31 +349,20 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
                       <Share2 className="w-5 h-5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem onClick={handleCopyLink} className="gap-3">
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Link2 className="w-4 h-4" />}
-                      <span>Copy Link</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleNativeShare} className="gap-3">
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleNativeShare} className="gap-2">
                       <Share2 className="w-4 h-4" />
-                      <span>Share via...</span>
+                      Share
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareToWhatsApp} className="gap-3">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>WhatsApp</span>
+                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      Copy Link
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareToFacebook} className="gap-3">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                      <span>Facebook</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareToX} className="gap-3">
+                    <DropdownMenuItem onClick={handleShareToX} className="gap-2">
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                       </svg>
-                      <span>X (Twitter)</span>
+                      Share on X
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

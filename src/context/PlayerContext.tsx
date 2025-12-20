@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
-import { supabase } from '@/integrations/supabase/client';
 
 // Split context for better performance - components only re-render for what they need
 interface PlayerStateContext {
@@ -39,25 +38,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(0.8);
   const [queue, setQueue] = useState<Song[]>(SONGS);
   const [isCrossfading, setIsCrossfading] = useState(false);
-
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
   const playNextRef = useRef<() => void>(() => {});
   const crossfadeTriggeredRef = useRef(false);
   const crossfadeDuration = 2000; // 2 second crossfade
   const crossfadeThreshold = 2; // Start crossfade 2 seconds before song ends
-
-  // Remote audio must be CORS-enabled for WebAudio processing; use backend proxy when needed.
-  const toPlayableUrl = useCallback((url: string) => {
-    const proxyBase = import.meta.env.VITE_SUPABASE_URL;
-    if (!proxyBase) return url;
-
-    if (url.startsWith('https://pub-dabb7edd1f1a4dbf82bbc290554e465b.r2.dev/')) {
-      return `${proxyBase}/functions/v1/audio-proxy?url=${encodeURIComponent(url)}`;
-    }
-
-    return url;
-  }, []);
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -121,7 +108,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const nextAudio = nextAudioRef.current;
     
     // Set up next track
-    nextAudio.src = toPlayableUrl(song.audioUrl);
+    nextAudio.src = song.audioUrl;
     nextAudio.volume = 0;
     nextAudio.play();
     
@@ -160,26 +147,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playSong = useCallback((song: Song, useCrossfade = false) => {
     if (audioRef.current) {
-      // Track play event for popularity ranking
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        supabase.from('song_analytics').insert({
-          song_id: song.id,
-          user_id: user?.id || null,
-          event_type: 'play'
-        }).then(() => {});
-      });
-
       if (useCrossfade && isPlaying && currentSong) {
         crossfadeToSong(song);
       } else {
-        audioRef.current.src = toPlayableUrl(song.audioUrl);
+        audioRef.current.src = song.audioUrl;
         audioRef.current.volume = volume;
         audioRef.current.play();
         setCurrentSong(song);
         setIsPlaying(true);
       }
     }
-  }, [crossfadeToSong, isPlaying, currentSong, volume, toPlayableUrl]);
+  }, [crossfadeToSong, isPlaying, currentSong, volume]);
 
   const togglePlay = useCallback(() => {
     if (audioRef.current) {

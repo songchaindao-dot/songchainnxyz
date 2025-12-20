@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AudienceProfile } from '@/types/social';
+import { AudienceProfile } from '@/types/database';
 import { motion } from 'framer-motion';
 
 interface UserCardProps {

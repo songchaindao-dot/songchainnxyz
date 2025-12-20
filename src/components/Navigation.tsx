@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift, Compass } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.webp';
@@ -10,8 +10,7 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { InviteFriends } from '@/components/InviteFriends';
 
 const navItems = [
-  { path: '/', label: 'Home', icon: Home },
-  { path: '/discover', label: 'Discover', icon: Compass },
+  { path: '/', label: 'Discover', icon: Home },
   { path: '/artists', label: 'Artists', icon: Users },
   { path: '/social', label: 'Social', icon: MessageCircle },
   { path: '/education', label: 'Learn', icon: BookOpen },
@@ -62,14 +61,14 @@ export function Navigation() {
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group ml-2">
               <motion.img
                 src={logo}
-                alt="$ongChainn"
+                alt="SongChainn"
                 className="w-9 h-9 object-contain"
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 400 }}
               />
               <div className="hidden xs:block">
                 <span className="font-heading font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                  $ongChainn
+                  SongChainn
                 </span>
                 <span className="hidden lg:inline text-xs text-primary ml-2 font-medium px-2 py-0.5 rounded-full bg-primary/10">
                   Audience

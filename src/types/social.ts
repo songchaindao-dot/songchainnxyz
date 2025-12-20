@@ -1,6 +1,4 @@
-import { Tables } from '@/integrations/supabase/types';
-
-export type AudienceProfile = Tables<'audience_profiles'>;
+import { AudienceProfile } from './database';
 
 export interface SocialPost {
   id: string;
@@ -60,12 +58,3 @@ export interface PlaylistCollaborator {
   created_at: string;
   profile?: AudienceProfile;
 }
-
-// Re-export types that were in database.ts
-export type LikedSong = Tables<'liked_songs'>;
-export type LikedArtist = Tables<'liked_artists'>;
-export type Playlist = Tables<'playlists'>;
-export type PlaylistSong = Tables<'playlist_songs'>;
-export type SongComment = Tables<'song_comments'>;
-export type UserRole = Tables<'user_roles'>;
-export type AppRole = 'admin' | 'audience';

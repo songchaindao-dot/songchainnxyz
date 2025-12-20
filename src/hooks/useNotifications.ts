@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { AudienceProfile } from '@/types/social';
+import { AudienceProfile } from '@/types/database';
 
 export interface Notification {
   id: string;

@@ -1,8 +1,5 @@
-import { useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Headphones, TrendingUp, Flame } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Sparkles, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -11,11 +8,6 @@ import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
-import { TrendingProfiles } from '@/components/TrendingProfiles';
-import { usePlayerActions } from '@/context/PlayerContext';
-import { NotificationPromptBanner } from '@/components/NotificationPromptBanner';
-import { useTrendingSongs, useTrackSongEvent } from '@/hooks/usePopularityRanking';
-import { PullToRefresh } from '@/components/PullToRefresh';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,45 +25,15 @@ const itemVariants = {
 };
 
 export default function Home() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { playSong } = usePlayerActions();
-  const { data: trendingSongs, refetch } = useTrendingSongs(10);
-  const trackEvent = useTrackSongEvent();
-  const queryClient = useQueryClient();
-  
-  // Use trending songs if available, otherwise fall back to static data
-  const featuredSongs = trendingSongs?.slice(0, 3) || SONGS.slice(0, 3);
-  const allSongs = trendingSongs || SONGS;
-
-  // Pull to refresh handler
-  const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['trending-songs'] });
-    await queryClient.invalidateQueries({ queryKey: ['popular-profiles'] });
-    await refetch();
-  }, [queryClient, refetch]);
-
-  // Handle deep link for shared songs
-  useEffect(() => {
-    const songId = searchParams.get('song');
-    if (songId) {
-      const song = SONGS.find(s => s.id === songId);
-      if (song) {
-        playSong(song);
-        // Clear the URL param after playing
-        setSearchParams({});
-      }
-    }
-  }, [searchParams, playSong, setSearchParams]);
+  const featuredSongs = SONGS.slice(0, 3);
+  const allSongs = SONGS;
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="h-[100dvh] bg-background pb-24 relative">
+    <div className="min-h-screen bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
       <Navigation />
 
       <main className="container mx-auto px-4 py-8 relative z-10">
-        {/* Notification Prompt Banner */}
-        <NotificationPromptBanner />
-
         {/* Hero Section */}
         <motion.section
           initial={{ opacity: 0, y: 30 }}
@@ -157,24 +119,17 @@ export default function Home() {
             initial="hidden"
             animate="show"
           >
-            {/* Featured Songs - Top Trending */}
+            {/* Featured Songs */}
             <motion.section variants={itemVariants}>
-              <div className="flex items-center gap-2 mb-2">
-                <Flame className="w-5 h-5 text-primary" />
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">Trending Now</span>
-              </div>
               <FeaturedTracksSection songs={featuredSongs} />
             </motion.section>
 
-            {/* All Songs - Ranked by Popularity */}
+            {/* All Songs */}
             <motion.section variants={itemVariants}>
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <h2 className="font-heading text-2xl font-semibold text-foreground">Top Charts</h2>
-              </div>
+              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">All Songs</h2>
               <div className="space-y-2">
                 {allSongs.map((song, index) => (
-                  <SongCard key={song.id} song={song} index={index} variant="compact" showRank />
+                  <SongCard key={song.id} song={song} index={index} variant="compact" />
                 ))}
               </div>
             </motion.section>
@@ -198,9 +153,6 @@ export default function Home() {
             transition={{ delay: 0.4 }}
           >
             <EngagementPanel />
-            
-            {/* Trending Profiles */}
-            <TrendingProfiles />
 
             {/* Phase Info */}
             <div className="glass-card rounded-3xl p-6 shine-overlay">
@@ -233,6 +185,6 @@ export default function Home() {
       </main>
 
       <AudioPlayer />
-    </PullToRefresh>
+    </div>
   );
 }

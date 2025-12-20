@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { AudienceProfile } from '@/types/social';
+import { AudienceProfile } from '@/types/database';
 import { 
   isBaseAppAvailable, 
   connectWithBaseApp, 

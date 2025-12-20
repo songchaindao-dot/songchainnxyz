@@ -11,8 +11,6 @@ import { AnimatedBackground } from '@/components/ui/animated-background';
 import { CountryCodeSelector } from '@/components/CountryCodeSelector';
 import { COUNTRY_CODES, CountryCode } from '@/data/countryCodes';
 import { cn } from '@/lib/utils';
-import { LockOpeningLogo } from '@/components/auth/LockOpeningLogo';
-import { CinemaSeatsAnimation } from '@/components/auth/CinemaSeatsAnimation';
 
 type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success';
 type AuthMode = 'signin' | 'signup';
@@ -47,11 +45,6 @@ export default function Auth() {
 
   // Track if user signed in via email/phone but needs wallet
   const [pendingWalletConnection, setPendingWalletConnection] = useState(false);
-
-  // Dramatic animation states
-  const [showLockAnimation, setShowLockAnimation] = useState(false);
-  const [showCinemaAnimation, setShowCinemaAnimation] = useState(false);
-  const [cinemaComplete, setCinemaComplete] = useState(false);
 
   // Only detect Base App wallet, not MetaMask or other wallets
   const hasBaseWallet = typeof window !== 'undefined' && (() => {
@@ -99,9 +92,6 @@ export default function Auth() {
         await new Promise((resolve) => setTimeout(resolve, 400));
         setConnectionState('success');
         setPendingWalletConnection(false);
-        
-        // Trigger lock opening animation for sign-in
-        setShowLockAnimation(true);
       }
     } catch (err) {
       setError('Connection failed. Please try again.');
@@ -116,35 +106,21 @@ export default function Auth() {
 
     try {
       if (authMode === 'signup') {
-        // Trigger cinema animation for signup
-        setShowCinemaAnimation(true);
-        
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
-        if (error) {
-          setShowCinemaAnimation(false);
-          throw error;
-        }
-        
-        // Mark cinema complete after signup success
-        setTimeout(() => {
-          setCinemaComplete(true);
-        }, 3000);
-        
+        if (error) throw error;
         toast.success('Account created! Now connect your Base Wallet.');
         setPendingWalletConnection(true);
+        setAuthView('connect-wallet');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Signed in! Now connect your Base Wallet.');
         setPendingWalletConnection(true);
         setAuthView('connect-wallet');
-        
-        // Trigger lock animation for sign-in
-        setShowLockAnimation(true);
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
@@ -270,59 +246,36 @@ export default function Auth() {
 
   const passwordStrength = getPasswordStrength();
 
-  // Handle cinema animation completion - transition to wallet connection
-  const handleCinemaComplete = () => {
-    setShowCinemaAnimation(false);
-    setCinemaComplete(false);
-    setAuthView('connect-wallet');
-  };
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       <AnimatedBackground variant="subtle" />
 
-      {/* Cinema Seats Animation Overlay for Signup */}
-      <CinemaSeatsAnimation
-        isActive={showCinemaAnimation}
-        isComplete={cinemaComplete}
-        onComplete={handleCinemaComplete}
-      />
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: showCinemaAnimation ? 0 : 1, y: 0 }}
+        animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md relative z-10"
       >
-        {/* Logo with Lock Opening Animation */}
+        {/* Logo */}
         <div className="text-center mb-8">
-          {showLockAnimation ? (
-            <LockOpeningLogo 
-              isOpening={showLockAnimation}
-              onComplete={() => {
-                // Animation complete - navigation will happen via auth state
-              }}
-            />
-          ) : (
-            <motion.img
-              src={logo}
-              alt="$ongChainn"
-              className="h-20 mx-auto mb-6"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200 }}
-            />
-          )}
+          <motion.img
+            src={logo}
+            alt="SongChainn"
+            className="h-20 mx-auto mb-6"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 200 }}
+          />
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: showLockAnimation ? 0 : 1, y: showLockAnimation ? -10 : 0 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="font-heading text-3xl font-bold text-foreground mb-2"
           >
-            {showLockAnimation ? 'Unlocking...' : 'Welcome to $ongChainn'}
+            Welcome to SongChainn
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
-            animate={{ opacity: showLockAnimation ? 0 : 1 }}
+            animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="text-sm text-muted-foreground"
           >
@@ -361,7 +314,7 @@ export default function Auth() {
                     <code className="text-sm font-mono text-foreground">{formatAddress(connectedAddress)}</code>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">Entering $ongChainn...</p>
+                <p className="text-sm text-muted-foreground">Entering SongChainn...</p>
                 <div className="mt-4"><Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" /></div>
               </motion.div>
             ) : authView === 'connect-wallet' ? (
@@ -374,14 +327,14 @@ export default function Auth() {
                     Connect Your Base Wallet
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Base Wallet is required to access and listen to music on $ongChainn.
+                    Base Wallet is required to access and listen to music on SongChainn.
                   </p>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-6">
                   <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your Base Wallet supports culture, identity, and future ownership on $ongChainn. 
+                    Your Base Wallet supports culture, identity, and future ownership on SongChainn. 
                     Music streaming requires wallet verification.
                   </p>
                 </div>
@@ -426,7 +379,7 @@ export default function Auth() {
                     Base Wallet Required
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Connect with Base Wallet to enter $ongChainn. This supports culture, identity, and future ownership.
+                    Connect with Base Wallet to enter SongChainn. This supports culture, identity, and future ownership.
                   </p>
                 </div>
 

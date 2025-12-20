@@ -1,9 +1,7 @@
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Link as LinkIcon, Shield, Zap, Users, Music } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
-import { AnimatedBackground } from '@/components/ui/animated-background';
 
 const educationTopics = [
   {
@@ -26,7 +24,7 @@ On-chain music means:
     title: 'Why Base?',
     content: `Base is a secure, low-cost blockchain built by Coinbase. It's designed for everyday people to use blockchain without the complexity.
 
-Why $ongChainn chose Base:
+Why SongChainn chose Base:
 • Low fees mean more money stays with artists
 • Fast transactions for seamless streaming
 • Backed by Coinbase's security and trust
@@ -49,7 +47,7 @@ In this Phase One Audience Edition, your listening activity:
 
 When ownership features activate in later phases, early audience members will have proven their commitment through listening behavior.
 
-Your plays, likes, and shares today shape what $ongChainn becomes tomorrow.`,
+Your plays, likes, and shares today shape what SongChainn becomes tomorrow.`,
   },
   {
     id: 'town-squares',
@@ -58,7 +56,7 @@ Your plays, likes, and shares today shape what $ongChainn becomes tomorrow.`,
     content: `Town Squares are geographic communities within Create On Base – hubs where artists and audiences come together around shared cultural identity.
 
 Livingstone Town Square (Zambia) is the pioneer chapter:
-• First Town Square in the $ongChainn ecosystem
+• First Town Square in the SongChainn ecosystem
 • Showcasing Zambian artists to a global audience
 • Building a model for other communities worldwide
 
@@ -68,7 +66,7 @@ More Town Squares will launch as the platform grows, each representing a unique 
     id: 'phases',
     icon: Music,
     title: 'Platform Phases',
-    content: `$ongChainn is built in intentional phases:
+    content: `SongChainn is built in intentional phases:
 
 Phase One (Current) – Audience Edition
 • Music discovery and streaming
@@ -92,11 +90,10 @@ Each phase builds on proven audience behavior and community trust.`,
 
 export default function Education() {
   return (
-    <div className="min-h-screen bg-background pb-24 relative">
-      <AnimatedBackground variant="default" />
+    <div className="min-h-screen bg-background pb-24">
       <Navigation />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -108,7 +105,7 @@ export default function Education() {
             <span className="text-sm font-medium">Education Hub</span>
           </div>
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Understanding $ongChainn
+            Understanding SongChainn
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Learn why decentralized music matters, how Base powers our platform, 
@@ -157,13 +154,13 @@ export default function Education() {
           <p className="text-muted-foreground mb-4">
             Ready to start building your listening history?
           </p>
-          <Link 
-            to="/"
+          <a 
+            href="/"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-medium shadow-glow hover:scale-105 transition-transform"
           >
             <Music className="w-4 h-4" />
             Start Listening
-          </Link>
+          </a>
         </motion.div>
       </main>
 

@@ -168,8 +168,8 @@ export function useReferrals() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join $ongChainn!',
-          text: 'Join me on $ongChainn and discover amazing music! Use my invite link to sign up and we both earn rewards.',
+          title: 'Join SongChainn!',
+          text: 'Join me on SongChainn and discover amazing music! Use my invite link to sign up and we both earn rewards.',
           url: link,
         });
         return true;
