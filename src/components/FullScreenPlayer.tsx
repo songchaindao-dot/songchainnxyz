@@ -1,11 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Link, Copy, Check } from 'lucide-react';
 import { usePlayer } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -34,11 +40,65 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
   } = usePlayer();
 
   const { toggleLike, isLiked } = useEngagement();
+  const { toast } = useToast();
   const [showQueue, setShowQueue] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [shuffle, setShuffle] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const getSongShareUrl = () => {
+    return `${window.location.origin}/?song=${currentSong?.id}`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getSongShareUrl());
+      setCopied(true);
+      toast({ title: 'Link copied to clipboard!' });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: 'Failed to copy link', variant: 'destructive' });
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${currentSong?.title} - ${currentSong?.artist}`,
+          text: `Check out "${currentSong?.title}" by ${currentSong?.artist} on SongChainn!`,
+          url: getSongShareUrl(),
+        });
+      } catch (err) {
+        // User cancelled or error
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleShareToX = () => {
+    const text = `🎵 Listening to "${currentSong?.title}" by ${currentSong?.artist} on @SongChainn\n\n`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(getSongShareUrl())}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const toggleRepeat = () => {
+    setRepeatMode(prev => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
+  };
+
+  const toggleShuffle = () => {
+    setShuffle(prev => !prev);
+    toast({ title: shuffle ? 'Shuffle off' : 'Shuffle on' });
+  };
 
   // Media Session API for lock screen / notification controls
   useEffect(() => {
@@ -213,7 +273,13 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
                 transition={{ delay: 0.35 }}
                 className="flex items-center justify-center gap-6 mb-8"
               >
-                <button className="p-2 text-muted-foreground hover:text-foreground transition-colors press-effect">
+                <button 
+                  onClick={toggleShuffle}
+                  className={cn(
+                    "p-2 transition-colors press-effect",
+                    shuffle ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
                   <Shuffle className="w-5 h-5" />
                 </button>
 
@@ -244,8 +310,18 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
                   <SkipForward className="w-6 h-6 text-foreground" />
                 </button>
 
-                <button className="p-2 text-muted-foreground hover:text-foreground transition-colors press-effect">
-                  <Repeat className="w-5 h-5" />
+                <button 
+                  onClick={toggleRepeat}
+                  className={cn(
+                    "p-2 transition-colors press-effect",
+                    repeatMode !== 'off' ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {repeatMode === 'one' ? (
+                    <Repeat1 className="w-5 h-5" />
+                  ) : (
+                    <Repeat className="w-5 h-5" />
+                  )}
                 </button>
               </motion.div>
 
@@ -287,9 +363,29 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
                   />
                 </div>
 
-                <button className="p-3 rounded-full glass hover:bg-secondary/50 transition-all press-effect text-muted-foreground">
-                  <Share2 className="w-5 h-5" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-3 rounded-full glass hover:bg-secondary/50 transition-all press-effect text-muted-foreground">
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleNativeShare} className="gap-2">
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      Copy Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareToX} className="gap-2">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      </svg>
+                      Share on X
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </motion.div>
             </div>
 
