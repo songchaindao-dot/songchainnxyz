@@ -1,6 +1,13 @@
 import cover1 from '@/assets/artist-cover-1.jpg';
 import cover2 from '@/assets/artist-cover-2.jpg';
 import cover3 from '@/assets/artist-cover-3.jpg';
+import artist7roo7hBased from '@/assets/artist-7roo7h-based.png';
+import artistDenajah from '@/assets/artist-denajah.png';
+import artistImanAfrikah from '@/assets/artist-iman-afrikah.png';
+import artistNda from '@/assets/artist-nda.png';
+import artistPrp from '@/assets/artist-prp.png';
+import artistSanchy from '@/assets/artist-sanchy.png';
+import artistSantana from '@/assets/artist-santana.png';
 
 export interface Song {
   id: string;
@@ -132,6 +139,7 @@ export const ARTISTS: Artist[] = [
     bio: 'A visionary artist from Zambia blending traditional African rhythms with contemporary electronic sounds. 7ROO7H BASED creates music that speaks to the soul and moves the body.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artist7roo7hBased,
     songs: ['1'],
   },
   {
@@ -140,6 +148,7 @@ export const ARTISTS: Artist[] = [
     bio: 'DenaJah brings infectious energy to every track, fusing reggae influences with modern Afrobeats. Their sound is a celebration of African heritage and global connection.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistDenajah,
     songs: ['2'],
   },
   {
@@ -148,6 +157,7 @@ export const ARTISTS: Artist[] = [
     bio: 'A pioneer of the Zambian music scene, IMan Afrikah creates timeless melodies that resonate across borders. Their music is a journey through sound and emotion.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistImanAfrikah,
     songs: ['3'],
   },
   {
@@ -156,6 +166,7 @@ export const ARTISTS: Artist[] = [
     bio: 'NDA explores the depths of introspective music, creating soundscapes that encourage reflection and growth. Their artistry pushes boundaries while staying rooted in authenticity.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistNda,
     songs: ['4'],
   },
   {
@@ -164,6 +175,7 @@ export const ARTISTS: Artist[] = [
     bio: 'PRP delivers high-energy tracks that get crowds moving. With a unique blend of hip-hop and African influences, their music is both fresh and deeply rooted.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistPrp,
     songs: ['5'],
   },
   {
@@ -172,6 +184,7 @@ export const ARTISTS: Artist[] = [
     bio: 'Sanchy creates atmospheric music that paints pictures with sound. Their late-night vibes and smooth production make every track a sonic experience.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistSanchy,
     songs: ['6'],
   },
   {
@@ -180,6 +193,7 @@ export const ARTISTS: Artist[] = [
     bio: 'Santana builds their music brick by brick, layering sounds to create powerful compositions. Their dedication to craft shines through in every release.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
+    profileImage: artistSantana,
     songs: ['7'],
   },
 ];
