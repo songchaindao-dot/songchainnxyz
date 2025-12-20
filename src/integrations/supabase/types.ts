@@ -21,6 +21,7 @@ export type Database = {
           cover_photo_url: string | null
           created_at: string
           id: string
+          is_public: boolean
           onboarding_completed: boolean
           profile_name: string
           profile_picture_url: string | null
@@ -34,6 +35,7 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           onboarding_completed?: boolean
           profile_name: string
           profile_picture_url?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           onboarding_completed?: boolean
           profile_name?: string
           profile_picture_url?: string | null
