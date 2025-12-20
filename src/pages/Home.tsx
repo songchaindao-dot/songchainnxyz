@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Headphones, TrendingUp, Flame } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -14,6 +15,7 @@ import { TrendingProfiles } from '@/components/TrendingProfiles';
 import { usePlayerActions } from '@/context/PlayerContext';
 import { NotificationPromptBanner } from '@/components/NotificationPromptBanner';
 import { useTrendingSongs, useTrackSongEvent } from '@/hooks/usePopularityRanking';
+import { PullToRefresh } from '@/components/PullToRefresh';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,12 +35,20 @@ const itemVariants = {
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { playSong } = usePlayerActions();
-  const { data: trendingSongs } = useTrendingSongs(10);
+  const { data: trendingSongs, refetch } = useTrendingSongs(10);
   const trackEvent = useTrackSongEvent();
+  const queryClient = useQueryClient();
   
   // Use trending songs if available, otherwise fall back to static data
   const featuredSongs = trendingSongs?.slice(0, 3) || SONGS.slice(0, 3);
   const allSongs = trendingSongs || SONGS;
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['trending-songs'] });
+    await queryClient.invalidateQueries({ queryKey: ['popular-profiles'] });
+    await refetch();
+  }, [queryClient, refetch]);
 
   // Handle deep link for shared songs
   useEffect(() => {
@@ -54,7 +64,7 @@ export default function Home() {
   }, [searchParams, playSong, setSearchParams]);
 
   return (
-    <div className="min-h-screen bg-background pb-24 relative">
+    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
       <Navigation />
 
@@ -223,6 +233,6 @@ export default function Home() {
       </main>
 
       <AudioPlayer />
-    </div>
+    </PullToRefresh>
   );
 }

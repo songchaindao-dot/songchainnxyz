@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Compass, Sparkles, TrendingUp, Clock, Shuffle, Filter, Music2, Heart } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
@@ -15,6 +16,7 @@ import { useEngagement } from '@/context/EngagementContext';
 import { usePlayerActions } from '@/context/PlayerContext';
 import { cn } from '@/lib/utils';
 import type { Genre } from '@/audio/ImmersiveAudioEngine';
+import { PullToRefresh } from '@/components/PullToRefresh';
 
 // Genre configuration with colors and icons
 const GENRES: { id: Genre | 'all'; label: string; color: string; description: string }[] = [
@@ -44,10 +46,18 @@ export default function Discover() {
   const [selectedGenre, setSelectedGenre] = useState<Genre | 'all'>('all');
   const [activeTab, setActiveTab] = useState<'trending' | 'foryou' | 'new'>('trending');
   
-  const { data: trendingSongs, isLoading: loadingTrending } = useTrendingSongs(20);
+  const { data: trendingSongs, isLoading: loadingTrending, refetch } = useTrendingSongs(20);
   const { data: popularProfiles } = usePopularProfiles(6);
   const { likedSongs } = useEngagement();
   const { playSong } = usePlayerActions();
+  const queryClient = useQueryClient();
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['trending-songs'] });
+    await queryClient.invalidateQueries({ queryKey: ['popular-profiles'] });
+    await refetch();
+  }, [queryClient, refetch]);
 
   // Filter songs by genre
   const filteredSongs = useMemo(() => {
@@ -126,7 +136,7 @@ export default function Discover() {
   }, [selectedGenre]);
 
   return (
-    <div className="min-h-screen bg-background pb-24 relative">
+    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
       <Navigation />
 
@@ -414,6 +424,6 @@ export default function Discover() {
       </main>
 
       <AudioPlayer />
-    </div>
+    </PullToRefresh>
   );
 }
