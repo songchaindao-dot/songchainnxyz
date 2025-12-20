@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.png';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { InviteFriends } from '@/components/InviteFriends';
 
 const navItems = [
   { path: '/', label: 'Discover', icon: Home },
@@ -19,6 +21,7 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { engagementPoints, currentStreak } = useEngagement();
+  const [showInvite, setShowInvite] = useState(false);
   
   // Enable swipe gestures for mobile navigation
   useSwipeNavigation();
@@ -103,8 +106,19 @@ export function Navigation() {
             })}
           </nav>
 
-          {/* Engagement Stats + Notifications */}
+          {/* Engagement Stats + Notifications + Invite */}
           <div className="flex items-center gap-3">
+            {/* Invite Friends Button */}
+            <motion.button
+              onClick={() => setShowInvite(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-xl glass text-primary hover:bg-primary/10 transition-colors"
+              aria-label="Invite friends"
+            >
+              <Gift className="w-5 h-5" />
+            </motion.button>
+
             <NotificationDropdown />
             <div className="hidden sm:flex items-center gap-3">
               <motion.div
@@ -144,6 +158,9 @@ export function Navigation() {
           </div>
         </div>
       </div>
+
+      {/* Invite Friends Modal */}
+      <InviteFriends isOpen={showInvite} onClose={() => setShowInvite(false)} />
     </header>
   );
 }

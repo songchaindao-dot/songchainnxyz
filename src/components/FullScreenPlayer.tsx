@@ -1,11 +1,12 @@
-import { memo, useEffect, useState, useRef, useCallback } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check } from 'lucide-react';
 import { usePlayerState, usePlayerActions, usePlayerTime } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useShare } from '@/hooks/useShare';
+import { toast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,51 +58,33 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
   const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
 
   const { toggleLike, isLiked } = useEngagement();
-  const { toast } = useToast();
+  const { copied, shareSong, copyToClipboard, shareToX, getShareUrl } = useShare();
   const [showQueue, setShowQueue] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [shuffle, setShuffle] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const getSongShareUrl = () => {
-    return `${window.location.origin}/?song=${currentSong?.id}`;
-  };
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(getSongShareUrl());
-      setCopied(true);
-      toast({ title: 'Link copied to clipboard!' });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: 'Failed to copy link', variant: 'destructive' });
+  const handleNativeShare = async () => {
+    if (currentSong) {
+      await shareSong(currentSong.title, currentSong.artist, currentSong.id);
     }
   };
 
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${currentSong?.title} - ${currentSong?.artist}`,
-          text: `Check out "${currentSong?.title}" by ${currentSong?.artist} on SongChainn!`,
-          url: getSongShareUrl(),
-        });
-      } catch (err) {
-        // User cancelled or error
-      }
-    } else {
-      handleCopyLink();
+  const handleCopyLink = async () => {
+    if (currentSong) {
+      const url = getShareUrl('song', currentSong.id);
+      await copyToClipboard(url);
     }
   };
 
   const handleShareToX = () => {
-    const text = `🎵 Listening to "${currentSong?.title}" by ${currentSong?.artist} on @SongChainn\n\n`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(getSongShareUrl())}`;
-    window.open(url, '_blank', 'width=600,height=400');
+    if (currentSong) {
+      const text = `🎵 Listening to "${currentSong.title}" by ${currentSong.artist} on @SongChainn`;
+      const url = getShareUrl('song', currentSong.id);
+      shareToX(text, url);
+    }
   };
 
   const toggleRepeat = () => {
