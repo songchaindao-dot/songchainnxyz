@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import logo from '@/assets/songchainn-logo.png';
+import logo from '@/assets/songchainn-logo.webp';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { CountryCodeSelector } from '@/components/CountryCodeSelector';
 import { COUNTRY_CODES, CountryCode } from '@/data/countryCodes';

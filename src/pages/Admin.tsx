@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import logo from '@/assets/songchainn-logo.png';
+import logo from '@/assets/songchainn-logo.webp';
 
 // Simulated admin authentication
 const ADMIN_PASSWORD = 'songchainn-admin-2024';

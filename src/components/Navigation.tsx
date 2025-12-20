@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
-import logo from '@/assets/songchainn-logo.png';
+import logo from '@/assets/songchainn-logo.webp';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { InviteFriends } from '@/components/InviteFriends';
