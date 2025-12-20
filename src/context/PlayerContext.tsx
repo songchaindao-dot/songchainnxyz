@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
-import { immersiveEngine } from '@/audio/ImmersiveAudioEngine';
 import { supabase } from '@/integrations/supabase/client';
 
 // Split context for better performance - components only re-render for what they need
@@ -63,14 +62,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
-    audioRef.current.crossOrigin = 'anonymous'; // Required for Web Audio API
     nextAudioRef.current = new Audio();
     nextAudioRef.current.volume = 0;
-    nextAudioRef.current.crossOrigin = 'anonymous';
-
-    // Connect both audio elements to SongChain Immersive™ audio engine
-    immersiveEngine.connectAudioElement(audioRef.current);
-    immersiveEngine.connectAudioElement(nextAudioRef.current);
 
     const audio = audioRef.current;
 
@@ -167,12 +160,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playSong = useCallback((song: Song, useCrossfade = false) => {
     if (audioRef.current) {
-      // Apply genre profile for SongChain Immersive™
-      if (song.genre) {
-        immersiveEngine.applyGenreProfile(song.genre);
-      }
-      immersiveEngine.resumeContext();
-
       // Track play event for popularity ranking
       supabase.auth.getUser().then(({ data: { user } }) => {
         supabase.from('song_analytics').insert({
