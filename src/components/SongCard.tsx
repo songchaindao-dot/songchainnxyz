@@ -1,9 +1,10 @@
 import { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart } from 'lucide-react';
+import { Play, Pause, Heart, Download, Check, Loader2 } from 'lucide-react';
 import { Song } from '@/data/musicData';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
+import { useOfflineMusic } from '@/hooks/useOfflineMusic';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
 import { AIArtwork } from './AIArtwork';
@@ -19,9 +20,12 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   const { currentSong, isPlaying } = usePlayerState();
   const { playSong, togglePlay } = usePlayerActions();
   const { toggleLike, isLiked } = useEngagement();
+  const { isOffline, isCaching, toggleOffline } = useOfflineMusic();
 
   const isCurrentSong = currentSong?.id === song.id;
   const liked = isLiked(song.id);
+  const offline = isOffline(song.id);
+  const caching = isCaching(song.id);
 
   const handlePlay = useCallback(() => {
     if (isCurrentSong) {
@@ -35,6 +39,11 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
     e.stopPropagation();
     toggleLike(song.id);
   }, [toggleLike, song.id]);
+
+  const handleDownload = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleOffline(song);
+  }, [toggleOffline, song]);
 
   if (variant === 'compact') {
     return (
@@ -87,10 +96,28 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
           <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
             {song.plays.toLocaleString()} plays
           </span>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleDownload}
+            disabled={caching}
+            className={cn(
+              "p-2 rounded-full transition-all",
+              offline ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            )}
+          >
+            {caching ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : offline ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -165,6 +192,24 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               </h3>
               <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
             </div>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleDownload}
+              disabled={caching}
+              className={cn(
+                "p-2 rounded-xl transition-all flex-shrink-0",
+                offline ? "bg-primary/20 text-primary" : "glass text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {caching ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : offline ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </motion.button>
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -248,17 +293,37 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
           <span className="text-xs text-muted-foreground tabular-nums">
             {song.plays.toLocaleString()} plays
           </span>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleLike}
-            className={cn(
-              "p-2 rounded-full transition-all -mr-2",
-              liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Heart className={cn("w-4 h-4", liked && "fill-current")} />
-          </motion.button>
+          <div className="flex items-center gap-1 -mr-2">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleDownload}
+              disabled={caching}
+              className={cn(
+                "p-2 rounded-full transition-all",
+                offline ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {caching ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : offline ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleLike}
+              className={cn(
+                "p-2 rounded-full transition-all",
+                liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className={cn("w-4 h-4", liked && "fill-current")} />
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>
