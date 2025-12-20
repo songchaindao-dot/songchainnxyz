@@ -46,7 +46,18 @@ export default function Auth() {
   // Track if user signed in via email/phone but needs wallet
   const [pendingWalletConnection, setPendingWalletConnection] = useState(false);
 
-  const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum?.request;
+  // Only detect Base App wallet, not MetaMask or other wallets
+  const hasBaseWallet = typeof window !== 'undefined' && (() => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum?.request) return false;
+    // Check for Base App or Coinbase Wallet specifically
+    if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) return true;
+    // Check multi-provider array
+    if (Array.isArray(ethereum.providers)) {
+      return ethereum.providers.some((p: any) => p?.isBaseApp || p?.isCoinbaseWallet);
+    }
+    return false;
+  })();
 
   const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/\D/g, '')}`;
 
@@ -59,7 +70,8 @@ export default function Auth() {
 
   const handleBaseSignIn = async () => {
     setError(null);
-    if (!hasInjectedWallet && !isBaseAppDetected) {
+    // Only proceed if Base Wallet is available
+    if (!hasBaseWallet && !isBaseAppDetected) {
       openInBaseApp();
       return;
     }
@@ -193,11 +205,11 @@ export default function Auth() {
 
   // Auto-trigger wallet sign-in when opened inside Base App (only on main view)
   React.useEffect(() => {
-    if ((isBaseAppDetected || hasInjectedWallet) && connectionState === 'idle' && !error && authView === 'main') {
+    if ((isBaseAppDetected || hasBaseWallet) && connectionState === 'idle' && !error && authView === 'main') {
       const timer = setTimeout(() => handleBaseSignIn(), 500);
       return () => clearTimeout(timer);
     }
-  }, [isBaseAppDetected, hasInjectedWallet, authView]);
+  }, [isBaseAppDetected, hasBaseWallet, authView]);
 
   React.useEffect(() => {
     if (walletAddress && connectionState === 'success') {
@@ -218,7 +230,7 @@ export default function Auth() {
       case 'success':
         return (<><CheckCircle2 className="w-5 h-5 mr-2" />Connected!</>);
       default:
-        return (<><Wallet className="w-5 h-5 mr-2" />{hasInjectedWallet || isBaseAppDetected ? 'Connect Base Wallet' : 'Open in Base App'}</>);
+        return (<><Wallet className="w-5 h-5 mr-2" />{hasBaseWallet || isBaseAppDetected ? 'Connect Base Wallet' : 'Open in Base App'}</>);
     }
   };
 
@@ -371,14 +383,14 @@ export default function Auth() {
                   </p>
                 </div>
 
-                {(isBaseAppDetected || hasInjectedWallet) && (
+                {(isBaseAppDetected || hasBaseWallet) && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-xl bg-green-500/10 border border-green-500/20"
                   >
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-400 font-medium">Wallet detected</span>
+                    <span className="text-sm text-green-400 font-medium">Base Wallet detected</span>
                   </motion.div>
                 )}
 
