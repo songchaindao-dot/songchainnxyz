@@ -1,4 +1,4 @@
-// SongChainn Push Notification Service Worker
+// $ongChainn Push Notification Service Worker
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'SongChainn', options)
+    self.registration.showNotification(data.title || '$ongChainn', options)
   );
 });
 

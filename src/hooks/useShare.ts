@@ -61,8 +61,8 @@ export function useShare() {
   const sharePost = useCallback(async (postId: string, content?: string) => {
     const url = getShareUrl('post', postId);
     return nativeShare({
-      title: 'Check out this post on SongChainn!',
-      text: content || 'Check out this post on SongChainn!',
+      title: 'Check out this post on $ongChainn!',
+      text: content || 'Check out this post on $ongChainn!',
       url,
     });
   }, [getShareUrl, nativeShare]);
@@ -71,7 +71,7 @@ export function useShare() {
     const url = getShareUrl('song', songId);
     return nativeShare({
       title: `${songTitle} - ${artistName}`,
-      text: `Check out "${songTitle}" by ${artistName} on SongChainn!`,
+      text: `Check out "${songTitle}" by ${artistName} on $ongChainn!`,
       url,
     });
   }, [getShareUrl, nativeShare]);
@@ -79,8 +79,8 @@ export function useShare() {
   const shareProfile = useCallback(async (profileName: string, userId: string) => {
     const url = getShareUrl('profile', userId);
     return nativeShare({
-      title: `${profileName} on SongChainn`,
-      text: `Check out ${profileName}'s profile on SongChainn!`,
+      title: `${profileName} on $ongChainn`,
+      text: `Check out ${profileName}'s profile on $ongChainn!`,
       url,
     });
   }, [getShareUrl, nativeShare]);

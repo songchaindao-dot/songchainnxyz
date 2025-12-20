@@ -25,7 +25,7 @@ On-chain music means:
     title: 'Why Base?',
     content: `Base is a secure, low-cost blockchain built by Coinbase. It's designed for everyday people to use blockchain without the complexity.
 
-Why SongChainn chose Base:
+Why $ongChainn chose Base:
 • Low fees mean more money stays with artists
 • Fast transactions for seamless streaming
 • Backed by Coinbase's security and trust
@@ -48,7 +48,7 @@ In this Phase One Audience Edition, your listening activity:
 
 When ownership features activate in later phases, early audience members will have proven their commitment through listening behavior.
 
-Your plays, likes, and shares today shape what SongChainn becomes tomorrow.`,
+Your plays, likes, and shares today shape what $ongChainn becomes tomorrow.`,
   },
   {
     id: 'town-squares',
@@ -57,7 +57,7 @@ Your plays, likes, and shares today shape what SongChainn becomes tomorrow.`,
     content: `Town Squares are geographic communities within Create On Base – hubs where artists and audiences come together around shared cultural identity.
 
 Livingstone Town Square (Zambia) is the pioneer chapter:
-• First Town Square in the SongChainn ecosystem
+• First Town Square in the $ongChainn ecosystem
 • Showcasing Zambian artists to a global audience
 • Building a model for other communities worldwide
 
@@ -67,7 +67,7 @@ More Town Squares will launch as the platform grows, each representing a unique 
     id: 'phases',
     icon: Music,
     title: 'Platform Phases',
-    content: `SongChainn is built in intentional phases:
+    content: `$ongChainn is built in intentional phases:
 
 Phase One (Current) – Audience Edition
 • Music discovery and streaming
@@ -106,7 +106,7 @@ export default function Education() {
             <span className="text-sm font-medium">Education Hub</span>
           </div>
           <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Understanding SongChainn
+            Understanding $ongChainn
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Learn why decentralized music matters, how Base powers our platform, 

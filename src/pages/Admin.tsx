@@ -48,7 +48,7 @@ export default function Admin() {
           className="max-w-sm w-full"
         >
           <div className="text-center mb-8">
-            <img src={logo} alt="SongChainn" className="w-16 h-16 mx-auto mb-4" />
+            <img src={logo} alt="$ongChainn" className="w-16 h-16 mx-auto mb-4" />
             <h1 className="font-heading text-2xl font-bold text-foreground mb-2">
               Admin Access
             </h1>
@@ -93,9 +93,9 @@ export default function Admin() {
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="SongChainn" className="w-8 h-8" />
+            <img src={logo} alt="$ongChainn" className="w-8 h-8" />
             <div>
-              <span className="font-heading font-bold text-foreground">SongChainn</span>
+              <span className="font-heading font-bold text-foreground">$ongChainn</span>
               <span className="text-xs text-destructive ml-2 font-medium">Admin</span>
             </div>
           </div>

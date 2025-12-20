@@ -131,7 +131,7 @@ export default function Onboarding() {
         >
           <motion.img
             src={logo}
-            alt="SongChainn"
+            alt="$ongChainn"
             className="h-12 mx-auto mb-4"
           />
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -141,7 +141,7 @@ export default function Onboarding() {
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Set up your Audience profile and take your place in the SongChainn experience.
+            Set up your Audience profile and take your place in the $ongChainn experience.
           </p>
         </motion.div>
 
@@ -296,7 +296,7 @@ export default function Onboarding() {
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              'Enter SongChainn'
+              'Enter $ongChainn'
             )}
           </Button>
 
