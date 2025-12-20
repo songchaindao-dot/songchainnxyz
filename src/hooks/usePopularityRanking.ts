@@ -173,20 +173,3 @@ export function useTrackProfileView() {
   });
 }
 
-// Combined hook for easy access to all ranking features
-export function usePopularityRanking() {
-  const trendingSongs = useTrendingSongs();
-  const popularProfiles = usePopularProfiles();
-  const trackSongEvent = useTrackSongEvent();
-  const trackProfileView = useTrackProfileView();
-
-  return {
-    trendingSongs: trendingSongs.data || [],
-    popularProfiles: popularProfiles.data || [],
-    isLoading: trendingSongs.isLoading || popularProfiles.isLoading,
-    trackPlay: (songId: string) => trackSongEvent.mutate({ songId, eventType: 'play' }),
-    trackShare: (songId: string) => trackSongEvent.mutate({ songId, eventType: 'share' }),
-    trackView: (songId: string) => trackSongEvent.mutate({ songId, eventType: 'view' }),
-    trackProfileView: (profileId: string) => trackProfileView.mutate(profileId),
-  };
-}
