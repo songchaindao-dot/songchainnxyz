@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
 import { MapPin, Users } from 'lucide-react';
-import { ARTISTS, TOWN_SQUARES } from '@/data/musicData';
+import { TOWN_SQUARES } from '@/data/musicData';
+import { useRankedArtists } from '@/hooks/usePopularity';
 import { ArtistCard } from '@/components/ArtistCard';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 
 export default function Artists() {
   const townSquare = TOWN_SQUARES[0];
+  const { rankedArtists } = useRankedArtists();
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -44,7 +46,7 @@ export default function Artists() {
             Featured Artists
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {ARTISTS.map((artist, index) => (
+            {rankedArtists.map((artist, index) => (
               <ArtistCard key={artist.id} artist={artist} index={index} />
             ))}
           </div>
@@ -58,7 +60,7 @@ export default function Artists() {
           className="mt-12 p-6 rounded-2xl bg-card border border-border text-center"
         >
           <p className="text-sm text-muted-foreground">
-            All music on SongChainn is curated for quality, originality, and cultural value. 
+            All music on $ongChainn is curated for quality, originality, and cultural value. 
             Only artists who are part of Create On Base Town Squares can be featured.
           </p>
         </motion.div>
