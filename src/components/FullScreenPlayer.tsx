@@ -1,0 +1,364 @@
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat } from 'lucide-react';
+import { usePlayer } from '@/context/PlayerContext';
+import { useEngagement } from '@/context/EngagementContext';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+
+function formatTime(seconds: number): string {
+  if (isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+interface FullScreenPlayerProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
+  const {
+    currentSong,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    togglePlay,
+    seekTo,
+    setVolume,
+    playNext,
+    playPrevious,
+    queue,
+  } = usePlayer();
+
+  const { toggleLike, isLiked } = useEngagement();
+  const [showQueue, setShowQueue] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+  const liked = currentSong ? isLiked(currentSong.id) : false;
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Media Session API for lock screen / notification controls
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentSong) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentSong.title,
+        artist: currentSong.artist,
+        album: currentSong.townSquare,
+        artwork: currentSong.coverImage
+          ? [{ src: currentSong.coverImage, sizes: '512x512', type: 'image/jpeg' }]
+          : [],
+      });
+
+      navigator.mediaSession.setActionHandler('play', togglePlay);
+      navigator.mediaSession.setActionHandler('pause', togglePlay);
+      navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
+      navigator.mediaSession.setActionHandler('nexttrack', playNext);
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined) {
+          seekTo(details.seekTime);
+        }
+      });
+    }
+  }, [currentSong, togglePlay, playPrevious, playNext, seekTo]);
+
+  // Update playback state
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
+  if (!currentSong) return null;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          className="fixed inset-0 z-[100] bg-background"
+        >
+          {/* Animated background blur based on cover */}
+          <div className="absolute inset-0 overflow-hidden">
+            {currentSong.coverImage && (
+              <>
+                <motion.img
+                  key={currentSong.id}
+                  src={currentSong.coverImage}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ filter: 'blur(100px) saturate(1.5)', opacity: 0.3 }}
+                  initial={{ scale: 1.1, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 0.3 }}
+                  transition={{ duration: 1 }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+              </>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          </div>
+
+          {/* Content */}
+          <div className="relative h-full flex flex-col">
+            {/* Header */}
+            <motion.header
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center justify-between p-4 safe-top"
+            >
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full glass hover:bg-secondary/50 transition-colors press-effect"
+              >
+                <X className="w-6 h-6 text-foreground" />
+              </button>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Now Playing</p>
+                <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                  {currentSong.townSquare}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowQueue(!showQueue)}
+                className={cn(
+                  "p-2 rounded-full glass transition-colors press-effect",
+                  showQueue ? "bg-primary/20 text-primary" : "hover:bg-secondary/50"
+                )}
+              >
+                <ListMusic className="w-6 h-6" />
+              </button>
+            </motion.header>
+
+            {/* Main content */}
+            <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8 overflow-hidden">
+              {/* Album Art */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 200, delay: 0.1 }}
+                className="relative w-full max-w-[320px] aspect-square mb-8"
+              >
+                <div className="absolute inset-0 rounded-3xl shadow-glow-intense opacity-60" />
+                <motion.div
+                  className="relative w-full h-full rounded-3xl overflow-hidden glass-card shine-overlay"
+                  animate={isPlaying ? { rotate: 360 } : {}}
+                  transition={isPlaying ? { duration: 20, repeat: Infinity, ease: 'linear' } : {}}
+                  style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
+                >
+                  {currentSong.coverImage ? (
+                    <img
+                      src={currentSong.coverImage}
+                      alt={currentSong.title}
+                      className="w-full h-full object-cover"
+                      onLoad={() => setIsImageLoaded(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full gradient-primary flex items-center justify-center">
+                      <motion.div
+                        className="w-24 h-24 rounded-full bg-primary-foreground/20"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Vinyl ring effect (optional decorative) */}
+                <div className="absolute inset-0 rounded-3xl border border-foreground/5 pointer-events-none" />
+              </motion.div>
+
+              {/* Song Info */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="w-full max-w-[320px] text-center mb-6"
+              >
+                <h2 className="font-heading text-2xl font-bold text-foreground mb-1 truncate">
+                  {currentSong.title}
+                </h2>
+                <p className="text-lg text-muted-foreground truncate">{currentSong.artist}</p>
+              </motion.div>
+
+              {/* Progress Bar */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="w-full max-w-[320px] mb-6"
+              >
+                <Slider
+                  value={[progress]}
+                  onValueChange={([v]) => seekTo((v / 100) * duration)}
+                  max={100}
+                  step={0.1}
+                  className="mb-2"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </motion.div>
+
+              {/* Controls */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="flex items-center justify-center gap-6 mb-8"
+              >
+                <button className="p-2 text-muted-foreground hover:text-foreground transition-colors press-effect">
+                  <Shuffle className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={playPrevious}
+                  className="p-3 rounded-full glass hover:bg-secondary/50 transition-all hover-scale press-effect"
+                >
+                  <SkipBack className="w-6 h-6 text-foreground" />
+                </button>
+
+                <motion.button
+                  onClick={togglePlay}
+                  className="p-5 gradient-primary rounded-full shadow-glow-intense press-effect"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-8 h-8 text-primary-foreground" />
+                  ) : (
+                    <Play className="w-8 h-8 text-primary-foreground ml-1" />
+                  )}
+                </motion.button>
+
+                <button
+                  onClick={playNext}
+                  className="p-3 rounded-full glass hover:bg-secondary/50 transition-all hover-scale press-effect"
+                >
+                  <SkipForward className="w-6 h-6 text-foreground" />
+                </button>
+
+                <button className="p-2 text-muted-foreground hover:text-foreground transition-colors press-effect">
+                  <Repeat className="w-5 h-5" />
+                </button>
+              </motion.div>
+
+              {/* Secondary Controls */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="flex items-center justify-center gap-8 w-full max-w-[320px]"
+              >
+                <button
+                  onClick={() => toggleLike(currentSong.id)}
+                  className={cn(
+                    "p-3 rounded-full glass transition-all press-effect",
+                    liked ? "bg-primary/20 text-primary" : "hover:bg-secondary/50 text-muted-foreground"
+                  )}
+                >
+                  <Heart className={cn("w-5 h-5", liked && "fill-current")} />
+                </button>
+
+                {/* Volume */}
+                <div className="flex items-center gap-2 flex-1 max-w-[140px]">
+                  <button
+                    onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                    className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {volume === 0 ? (
+                      <VolumeX className="w-5 h-5" />
+                    ) : (
+                      <Volume2 className="w-5 h-5" />
+                    )}
+                  </button>
+                  <Slider
+                    value={[volume * 100]}
+                    onValueChange={([v]) => setVolume(v / 100)}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
+                </div>
+
+                <button className="p-3 rounded-full glass hover:bg-secondary/50 transition-all press-effect text-muted-foreground">
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </motion.div>
+            </div>
+
+            {/* Queue Panel (slide in from right) */}
+            <AnimatePresence>
+              {showQueue && (
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="absolute right-0 top-0 bottom-0 w-full max-w-sm glass-surface border-l border-border z-10"
+                >
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between p-4 border-b border-border">
+                      <h3 className="font-heading font-semibold text-foreground">Up Next</h3>
+                      <button
+                        onClick={() => setShowQueue(false)}
+                        className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
+                      {queue.map((song, index) => (
+                        <motion.div
+                          key={song.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer",
+                            currentSong.id === song.id
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-secondary/50"
+                          )}
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
+                            {song.coverImage ? (
+                              <img
+                                src={song.coverImage}
+                                alt={song.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full gradient-primary opacity-60" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={cn(
+                                "font-medium text-sm truncate",
+                                currentSong.id === song.id ? "text-primary" : "text-foreground"
+                              )}
+                            >
+                              {song.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
