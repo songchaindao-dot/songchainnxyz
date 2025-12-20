@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useShare } from '@/hooks/useShare';
 import { toast } from '@/hooks/use-toast';
-import { ImmersiveVisualizer } from '@/components/ImmersiveVisualizer';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +41,6 @@ const FullScreenVideoArt = memo(function FullScreenVideoArt({ isPlaying }: { isP
         playsInline
         className="w-full h-full object-cover"
       />
-      <ImmersiveVisualizer isPlaying={isPlaying} />
     </div>
   );
 });

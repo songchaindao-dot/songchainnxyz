@@ -9,7 +9,7 @@ import artistPrp from '@/assets/artist-prp.png';
 import artistSanchy from '@/assets/artist-sanchy.png';
 import artistSantana from '@/assets/artist-santana.png';
 
-import { Genre } from '@/audio/ImmersiveAudioEngine';
+export type Genre = 'trap' | 'kalind-rock' | 'kali-funk' | 'afro' | 'dancehall' | 'fusion';
 
 export interface Song {
   id: string;

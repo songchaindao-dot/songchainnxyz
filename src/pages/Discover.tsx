@@ -15,7 +15,7 @@ import { useTrendingSongs, usePopularProfiles } from '@/hooks/usePopularityRanki
 import { useEngagement } from '@/context/EngagementContext';
 import { usePlayerActions } from '@/context/PlayerContext';
 import { cn } from '@/lib/utils';
-import type { Genre } from '@/audio/ImmersiveAudioEngine';
+import type { Genre } from '@/data/musicData';
 import { PullToRefresh } from '@/components/PullToRefresh';
 
 // Genre configuration with colors and icons
