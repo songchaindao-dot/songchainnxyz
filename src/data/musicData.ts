@@ -60,7 +60,7 @@ export const SONGS: Song[] = [
   {
     id: '2',
     title: 'Dance',
-    artist: 'DebaJah',
+    artist: 'DenaJah',
     artistId: '2',
     audioUrl: 'https://pub-dabb7edd1f1a4dbf82bbc290554e465b.r2.dev/Denajah%20-%20Dance.wav',
     coverImage: cover2,
@@ -136,8 +136,8 @@ export const ARTISTS: Artist[] = [
   },
   {
     id: '2',
-    name: 'DebaJah',
-    bio: 'DebaJah brings infectious energy to every track, fusing reggae influences with modern Afrobeats. Their sound is a celebration of African heritage and global connection.',
+    name: 'DenaJah',
+    bio: 'DenaJah brings infectious energy to every track, fusing reggae influences with modern Afrobeats. Their sound is a celebration of African heritage and global connection.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
     songs: ['2'],
