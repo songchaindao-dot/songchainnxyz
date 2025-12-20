@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Heart, MoreHorizontal } from 'lucide-react';
+import { X, Send, Heart, MoreHorizontal, Reply } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,11 @@ interface CommentSheetProps {
   commentsCount: number;
 }
 
+interface ReplyingTo {
+  userId: string;
+  userName: string;
+}
+
 export function CommentSheet({ 
   isOpen, 
   onClose, 
@@ -28,17 +33,77 @@ export function CommentSheet({
   commentsCount 
 }: CommentSheetProps) {
   const [newComment, setNewComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  // Focus input when replying
+  useEffect(() => {
+    if (replyingTo && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [replyingTo]);
+
+  // Clear reply state when sheet closes
+  useEffect(() => {
+    if (!isOpen) {
+      setReplyingTo(null);
+      setNewComment('');
+    }
+  }, [isOpen]);
+
+  const handleReply = (userId: string, userName: string) => {
+    setReplyingTo({ userId, userName });
+    setNewComment(`@${userName} `);
+    inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewComment('');
+  };
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
     onAddComment(newComment);
     setNewComment('');
+    setReplyingTo(null);
   };
 
   const goToProfile = (userId: string) => {
     onClose();
     navigate(`/audience/${userId}`);
+  };
+
+  // Parse and render comment content with clickable @mentions
+  const renderCommentContent = (content: string) => {
+    const mentionRegex = /@(\w+)/g;
+    const parts = content.split(mentionRegex);
+    
+    return parts.map((part, index) => {
+      // Every odd index is a captured group (username)
+      if (index % 2 === 1) {
+        return (
+          <button
+            key={index}
+            className="text-primary font-semibold hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Find user by name and navigate
+              const mentionedUser = comments.find(
+                c => c.profile?.profile_name?.toLowerCase() === part.toLowerCase()
+              );
+              if (mentionedUser) {
+                goToProfile(mentionedUser.user_id);
+              }
+            }}
+          >
+            @{part}
+          </button>
+        );
+      }
+      return part;
+    });
   };
 
   return (
@@ -121,7 +186,9 @@ export function CommentSheet({
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
-                        <p className="text-sm text-foreground/90 mt-1">{comment.content}</p>
+                        <p className="text-sm text-foreground/90 mt-1">
+                          {renderCommentContent(comment.content)}
+                        </p>
                         <div className="flex items-center gap-4 mt-2">
                           <button 
                             className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -131,10 +198,11 @@ export function CommentSheet({
                             <span className="text-xs">Like</span>
                           </button>
                           <button 
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => toast({ title: 'Reply', description: 'Comment replies coming soon.' })}
+                            className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                            onClick={() => handleReply(comment.user_id, comment.profile?.profile_name || 'Anonymous')}
                           >
-                            Reply
+                            <Reply className="w-4 h-4" />
+                            <span className="text-xs">Reply</span>
                           </button>
                         </div>
                       </div>
@@ -144,11 +212,31 @@ export function CommentSheet({
               )}
             </ScrollArea>
 
+            {/* Reply indicator */}
+            <AnimatePresence>
+              {replyingTo && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 py-2 bg-muted/50 border-t border-border flex items-center justify-between"
+                >
+                  <span className="text-sm text-muted-foreground">
+                    Replying to <span className="text-primary font-medium">@{replyingTo.userName}</span>
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={cancelReply} className="h-7 px-2">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Input */}
             <div className="p-4 border-t border-border bg-background">
               <div className="flex items-center gap-3">
                 <Input
-                  placeholder="Add a comment..."
+                  ref={inputRef}
+                  placeholder={replyingTo ? `Reply to @${replyingTo.userName}...` : "Add a comment..."}
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
