@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "name": "SongChain",
+  "description": "A Base-native music platform connecting artists and fans.",
+  "icon": "https://songchainn.xyz/icon.png",
+  "homeUrl": "https://songchainn.xyz",
+  "frame": {
+    "url": "https://songchainn.xyz"
+  }
+}
