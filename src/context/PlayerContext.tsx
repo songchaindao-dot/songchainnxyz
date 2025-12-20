@@ -56,8 +56,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     nextAudioRef.current.volume = 0;
     nextAudioRef.current.crossOrigin = 'anonymous';
 
-    // Connect to SongChain Immersive™ audio engine
+    // Connect both audio elements to SongChain Immersive™ audio engine
     immersiveEngine.connectAudioElement(audioRef.current);
+    immersiveEngine.connectAudioElement(nextAudioRef.current);
 
     const audio = audioRef.current;
 
