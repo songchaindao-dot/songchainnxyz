@@ -56,12 +56,12 @@ export default function Discover() {
   // Get user's preferred genres based on likes
   const preferredGenres = useMemo(() => {
     const genreCounts: Record<Genre, number> = {
-      'Afrobeats': 0,
-      'Reggae': 0,
-      'Hip-Hop': 0,
-      'Soul': 0,
-      'Electronic': 0,
-      'R&B': 0,
+      'Trap': 0,
+      'Afro': 0,
+      'Dancehall': 0,
+      'Kalind-Rock': 0,
+      'Kali-Funk': 0,
+      'ZamRock-Fusion': 0,
     };
 
     likedSongIds.forEach(songId => {
@@ -114,12 +114,12 @@ export default function Discover() {
 
   const getGenreColor = (genre: Genre) => {
     const colors: Record<Genre, string> = {
-      'Afrobeats': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      'Reggae': 'bg-green-500/20 text-green-400 border-green-500/30',
-      'Hip-Hop': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      'Soul': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-      'Electronic': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-      'R&B': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      'Trap': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      'Afro': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'Dancehall': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'Kalind-Rock': 'bg-red-500/20 text-red-400 border-red-500/30',
+      'Kali-Funk': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      'ZamRock-Fusion': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
     };
     return colors[genre];
   };
