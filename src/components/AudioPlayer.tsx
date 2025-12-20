@@ -5,6 +5,7 @@ import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { useEffect, useRef, useState } from 'react';
 import { FullScreenPlayer } from './FullScreenPlayer';
+import { SpinningSongArt } from './SpinningSongArt';
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
@@ -106,36 +107,8 @@ export function AudioPlayer() {
                 onClick={() => setIsFullScreen(true)}
                 className="flex items-center gap-3 min-w-0 flex-1 text-left group"
               >
-                <div className="relative w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden shadow-soft shine-overlay">
-                  {currentSong.coverImage ? (
-                    <img
-                      src={currentSong.coverImage}
-                      alt={currentSong.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full gradient-primary animate-pulse-glow" />
-                  )}
-                  {/* Playing indicator */}
-                  {isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/40">
-                      <div className="flex items-end gap-0.5 h-4">
-                        {[1, 2, 3].map((i) => (
-                          <motion.div
-                            key={i}
-                            className="w-0.5 bg-primary rounded-full"
-                            animate={{ height: ['30%', '100%', '30%'] }}
-                            transition={{
-                              duration: 0.6,
-                              repeat: Infinity,
-                              delay: i * 0.15,
-                              ease: 'easeInOut',
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="relative flex-shrink-0">
+                  <SpinningSongArt isPlaying={isPlaying} size="md" className="shadow-soft" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">

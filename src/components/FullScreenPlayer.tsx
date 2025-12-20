@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Link, Copy, Check } from 'lucide-react';
+import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check } from 'lucide-react';
 import { usePlayer } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import songArtVideo from '@/assets/song-art.mp4';
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -211,22 +212,14 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
                   transition={isPlaying ? { duration: 20, repeat: Infinity, ease: 'linear' } : {}}
                   style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                 >
-                  {currentSong.coverImage ? (
-                    <img
-                      src={currentSong.coverImage}
-                      alt={currentSong.title}
-                      className="w-full h-full object-cover"
-                      onLoad={() => setIsImageLoaded(true)}
-                    />
-                  ) : (
-                    <div className="w-full h-full gradient-primary flex items-center justify-center">
-                      <motion.div
-                        className="w-24 h-24 rounded-full bg-primary-foreground/20"
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      />
-                    </div>
-                  )}
+                  <video
+                    src={songArtVideo}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
                 </motion.div>
 
                 {/* Vinyl ring effect (optional decorative) */}
