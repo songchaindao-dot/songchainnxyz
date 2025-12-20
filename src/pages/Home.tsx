@@ -64,7 +64,7 @@ export default function Home() {
   }, [searchParams, playSong, setSearchParams]);
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen bg-background pb-24 relative">
+    <PullToRefresh onRefresh={handleRefresh} className="h-[100dvh] bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
       <Navigation />
 

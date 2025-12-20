@@ -106,6 +106,7 @@ class ImmersiveAudioEngine {
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private analyserNode: AnalyserNode | null = null;
   private gainNode: GainNode | null = null;
+  private inputNode: GainNode | null = null;
   
   // DSP Chain Nodes
   private bassFilter: BiquadFilterNode | null = null;
@@ -143,7 +144,7 @@ class ImmersiveAudioEngine {
 
   private initializeDSPChain(): void {
     if (!this.audioContext) return;
-    
+
     const ctx = this.audioContext;
 
     // Create analyzer for visual feedback
@@ -151,6 +152,10 @@ class ImmersiveAudioEngine {
     this.analyserNode.fftSize = 256;
     this.analyserNode.smoothingTimeConstant = 0.8;
     this.frequencyData = new Uint8Array(this.analyserNode.frequencyBinCount);
+
+    // Shared input node (lets us mix multiple sources during crossfades)
+    this.inputNode = ctx.createGain();
+    this.inputNode.gain.value = 1.0;
 
     // Master gain
     this.gainNode = ctx.createGain();
@@ -184,10 +189,10 @@ class ImmersiveAudioEngine {
     // Binaural Stereo Widening
     this.channelSplitter = ctx.createChannelSplitter(2);
     this.channelMerger = ctx.createChannelMerger(2);
-    
+
     this.delayLeft = ctx.createDelay(0.1);
     this.delayLeft.delayTime.value = 0.0003; // 0.3ms Haas effect
-    
+
     this.delayRight = ctx.createDelay(0.1);
     this.delayRight.delayTime.value = 0.0005; // 0.5ms for width
 
@@ -199,7 +204,7 @@ class ImmersiveAudioEngine {
     this.harmonicDistortion = ctx.createWaveShaper();
     (this.harmonicDistortion as any).curve = this.createHarmonicCurve(0.3);
     this.harmonicDistortion.oversample = '2x';
-    
+
     this.harmonicGain = ctx.createGain();
     this.harmonicGain.gain.value = 0.15; // Blend amount
 
@@ -207,9 +212,57 @@ class ImmersiveAudioEngine {
     this.convolver = ctx.createConvolver();
     this.createSpatialImpulse();
 
+    // Wire DSP chain ONCE (do not rebuild per element, it causes duplicate connections + slowdowns)
+    if (
+      this.inputNode &&
+      this.bassFilter &&
+      this.midFilter &&
+      this.highFilter &&
+      this.compressor &&
+      this.channelSplitter &&
+      this.delayLeft &&
+      this.delayRight &&
+      this.channelMerger &&
+      this.convolver &&
+      this.harmonicDistortion &&
+      this.harmonicGain &&
+      this.gainNode &&
+      this.analyserNode
+    ) {
+      // Input -> EQ
+      this.inputNode.connect(this.bassFilter);
+      this.bassFilter.connect(this.midFilter);
+      this.midFilter.connect(this.highFilter);
+
+      // EQ -> Compressor
+      this.highFilter.connect(this.compressor);
+
+      // Compressor -> Split (Haas micro-delays)
+      this.compressor.connect(this.channelSplitter);
+      this.channelSplitter.connect(this.delayLeft, 0);
+      this.channelSplitter.connect(this.delayRight, 1);
+
+      // Merge back
+      this.delayLeft.connect(this.channelMerger, 0, 0);
+      this.delayRight.connect(this.channelMerger, 0, 1);
+
+      // Depth
+      this.channelMerger.connect(this.convolver);
+
+      // Parallel harmonic path
+      this.compressor.connect(this.harmonicDistortion);
+      this.harmonicDistortion.connect(this.harmonicGain);
+
+      // Mix + output
+      this.convolver.connect(this.gainNode);
+      this.harmonicGain.connect(this.gainNode);
+      this.gainNode.connect(this.analyserNode);
+      this.analyserNode.connect(ctx.destination);
+    }
+
     // Apply initial genre profile
     this.applyGenreProfile(this.currentGenre);
-    
+
     // Start analysis loop
     this.startAnalysisLoop();
   }
@@ -250,7 +303,7 @@ class ImmersiveAudioEngine {
 
   connectAudioElement(audioElement: HTMLAudioElement): void {
     const ctx = this.createAudioContext();
-    
+
     if (!this.analyserNode) {
       this.initializeDSPChain();
     }
@@ -260,11 +313,8 @@ class ImmersiveAudioEngine {
       ctx.resume();
     }
 
-    // Check if already connected
-    if (this.connectedElements.has(audioElement)) {
-      // Already connected, just ensure it's routed properly
-      return;
-    }
+    // Already connected
+    if (this.connectedElements.has(audioElement)) return;
 
     // Create source from audio element
     let sourceNode: MediaElementAudioSourceNode;
@@ -272,61 +322,22 @@ class ImmersiveAudioEngine {
       sourceNode = ctx.createMediaElementSource(audioElement);
       this.connectedElements.set(audioElement, sourceNode);
     } catch (e) {
-      // Element already has a source - try to get it from our map
       const existingSource = this.connectedElements.get(audioElement);
       if (existingSource) {
         sourceNode = existingSource;
       } else {
-        // Can't recover - audio will play directly without processing
         console.warn('Audio element already connected to different context');
         return;
       }
     }
 
-    if (!this.bassFilter || !this.midFilter || !this.highFilter || 
-        !this.compressor || !this.channelSplitter || !this.channelMerger ||
-        !this.delayLeft || !this.delayRight || !this.harmonicDistortion ||
-        !this.harmonicGain || !this.convolver || !this.gainNode || 
-        !this.analyserNode) {
-      // If DSP chain not ready, connect directly to destination
+    // Route into shared DSP input (supports multiple simultaneous sources for crossfades)
+    if (this.inputNode) {
+      sourceNode.connect(this.inputNode);
+    } else {
+      // Fallback: still let audio play even if DSP isn't ready
       sourceNode.connect(ctx.destination);
-      return;
     }
-
-    // Build DSP chain
-    // Source -> EQ Chain
-    sourceNode.connect(this.bassFilter);
-    this.bassFilter.connect(this.midFilter);
-    this.midFilter.connect(this.highFilter);
-    
-    // EQ -> Compressor
-    this.highFilter.connect(this.compressor);
-    
-    // Compressor -> Binaural Stereo Widening
-    this.compressor.connect(this.channelSplitter);
-    
-    // Split to left/right with micro-delays (Haas effect for width)
-    this.channelSplitter.connect(this.delayLeft, 0);
-    this.channelSplitter.connect(this.delayRight, 1);
-    
-    // Merge back with phase shift
-    this.delayLeft.connect(this.channelMerger, 0, 0);
-    this.delayRight.connect(this.channelMerger, 0, 1);
-    
-    // Add spatial depth via subtle convolution
-    this.channelMerger.connect(this.convolver);
-    
-    // Parallel harmonic enhancement path
-    this.compressor.connect(this.harmonicDistortion);
-    this.harmonicDistortion.connect(this.harmonicGain);
-    
-    // Mix convolution and harmonics
-    this.convolver.connect(this.gainNode);
-    this.harmonicGain.connect(this.gainNode);
-    
-    // Final output with analyzer
-    this.gainNode.connect(this.analyserNode);
-    this.analyserNode.connect(ctx.destination);
   }
 
   applyGenreProfile(genre: Genre): void {
