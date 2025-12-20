@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.png';
@@ -8,6 +8,7 @@ import logo from '@/assets/songchainn-logo.png';
 const navItems = [
   { path: '/', label: 'Discover', icon: Home },
   { path: '/artists', label: 'Artists', icon: Users },
+  { path: '/social', label: 'Social', icon: MessageCircle },
   { path: '/education', label: 'Learn', icon: BookOpen },
   { path: '/profile', label: 'Profile', icon: User },
 ];
