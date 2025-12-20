@@ -1,15 +1,21 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Music } from 'lucide-react';
+import { ArrowLeft, MapPin, Music, UserPlus, UserCheck } from 'lucide-react';
 import { ARTISTS, SONGS } from '@/data/musicData';
 import { SongCard } from '@/components/SongCard';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
+import { Button } from '@/components/ui/button';
+import { useAudienceInteractions } from '@/hooks/useAudienceInteractions';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ArtistDetail() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { isArtistLiked, toggleLikeArtist } = useAudienceInteractions();
   const artist = ARTISTS.find(a => a.id === id);
   const artistSongs = SONGS.filter(s => s.artistId === id);
+  const isFollowing = id ? isArtistLiked(id) : false;
 
   if (!artist) {
     return (
@@ -67,9 +73,30 @@ export default function ArtistDetail() {
 
             {/* Info */}
             <div className="flex-1">
-              <h1 className="font-heading text-4xl font-bold text-foreground mb-2">
-                {artist.name}
-              </h1>
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h1 className="font-heading text-4xl font-bold text-foreground">
+                  {artist.name}
+                </h1>
+                {user && (
+                  <Button
+                    onClick={() => id && toggleLikeArtist(id)}
+                    variant={isFollowing ? "secondary" : "default"}
+                    className="flex-shrink-0"
+                  >
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Follow
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
               
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1 text-muted-foreground">

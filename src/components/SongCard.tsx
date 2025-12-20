@@ -4,6 +4,7 @@ import { Song } from '@/data/musicData';
 import { usePlayer } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
+import { SpinningSongArt } from './SpinningSongArt';
 
 interface SongCardProps {
   song: Song;
@@ -42,35 +43,23 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
         onClick={handlePlay}
       >
         <div className="relative w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden shadow-soft shine-overlay">
-          {song.coverImage ? (
-            <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+          {isCurrentSong ? (
+            <SpinningSongArt isPlaying={isPlaying} size="lg" />
           ) : (
-            <div className="w-full h-full gradient-primary opacity-60" />
-          )}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileHover={{ opacity: 1 }}
-            className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm"
-          >
-            {isCurrentSong && isPlaying ? (
-              <Pause className="w-5 h-5 text-foreground" />
-            ) : (
-              <Play className="w-5 h-5 text-foreground ml-0.5" />
-            )}
-          </motion.div>
-          {isCurrentSong && isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-end gap-0.5 h-5">
-                {[1, 2, 3].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1 bg-primary rounded-full"
-                    animate={{ height: ['30%', '100%', '30%'] }}
-                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                  />
-                ))}
-              </div>
-            </div>
+            <>
+              {song.coverImage ? (
+                <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full gradient-primary opacity-60" />
+              )}
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileHover={{ opacity: 1 }}
+                className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm"
+              >
+                <Play className="w-5 h-5 text-foreground ml-0.5" />
+              </motion.div>
+            </>
           )}
         </div>
 
@@ -177,10 +166,16 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
       onClick={handlePlay}
     >
       <div className="aspect-square bg-secondary relative overflow-hidden">
-        {song.coverImage ? (
-          <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+        {isCurrentSong ? (
+          <SpinningSongArt isPlaying={isPlaying} size="xl" className="rounded-none" />
         ) : (
-          <div className="absolute inset-0 gradient-primary opacity-40" />
+          <>
+            {song.coverImage ? (
+              <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 gradient-primary opacity-40" />
+            )}
+          </>
         )}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
