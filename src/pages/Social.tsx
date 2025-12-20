@@ -1,20 +1,38 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, TrendingUp, UserPlus, Headphones } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, 
+  TrendingUp, 
+  UserPlus, 
+  Headphones,
+  Plus,
+  Compass,
+  Heart,
+  Search,
+  Bell,
+  Sparkles
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Navigation } from '@/components/Navigation';
 import { PostComposer } from '@/components/social/PostComposer';
-import { PostCard } from '@/components/social/PostCard';
+import { MusicFeedCard } from '@/components/social/MusicFeedCard';
+import { CommentSheet } from '@/components/social/CommentSheet';
 import { UserCard } from '@/components/social/UserCard';
 import { useSocial } from '@/hooks/useSocial';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AudienceProfile } from '@/types/database';
+import { SocialPostWithProfile, PostComment } from '@/types/social';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 export default function Social() {
-  const { user } = useAuth();
+  const { user, audienceProfile } = useAuth();
+  const navigate = useNavigate();
   const {
     posts,
     isLoading,
@@ -30,9 +48,18 @@ export default function Social() {
     refetchPosts
   } = useSocial();
 
-  const [feedType, setFeedType] = useState<'all' | 'following'>('all');
+  const [feedType, setFeedType] = useState<'foryou' | 'following'>('foryou');
   const [suggestedUsers, setSuggestedUsers] = useState<AudienceProfile[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [showComposer, setShowComposer] = useState(false);
+  const [currentPostIndex, setCurrentPostIndex] = useState(0);
+  const [commentSheet, setCommentSheet] = useState<{ isOpen: boolean; postId: string | null }>({
+    isOpen: false,
+    postId: null
+  });
+  const [currentComments, setCurrentComments] = useState<PostComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchSuggestedUsers = async () => {
@@ -58,163 +85,276 @@ export default function Social() {
   }, [user, following]);
 
   useEffect(() => {
-    refetchPosts(feedType);
+    refetchPosts(feedType === 'following' ? 'following' : 'all');
   }, [feedType]);
 
   const filteredPosts = feedType === 'following' 
     ? posts.filter(p => following.includes(p.user_id) || p.user_id === user?.id)
     : posts;
 
+  const handleOpenComments = async (postId: string) => {
+    setCommentSheet({ isOpen: true, postId });
+    setLoadingComments(true);
+    const comments = await getPostComments(postId);
+    setCurrentComments(comments);
+    setLoadingComments(false);
+  };
+
+  const handleAddComment = async (content: string) => {
+    if (!commentSheet.postId) return;
+    await addComment(commentSheet.postId, content);
+    const comments = await getPostComments(commentSheet.postId);
+    setCurrentComments(comments);
+  };
+
+  const currentPost = filteredPosts[currentPostIndex];
+  const currentCommentsCount = currentPost?.comments_count || 0;
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollTop = container.scrollTop;
+    const itemHeight = container.clientHeight;
+    const newIndex = Math.round(scrollTop / itemHeight);
+    if (newIndex !== currentPostIndex && newIndex >= 0 && newIndex < filteredPosts.length) {
+      setCurrentPostIndex(newIndex);
+    }
+  }, [currentPostIndex, filteredPosts.length]);
+
+  const goToProfile = (userId: string) => {
+    navigate(`/audience/${userId}`);
+  };
+
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
+            {/* Left: Logo/Title */}
             <div className="flex items-center gap-2">
-              <Headphones className="w-6 h-6 text-primary" />
-              <h1 className="text-xl font-bold">Social</h1>
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h1 className="font-bold text-lg">SongFeed</h1>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{followers.length} followers</span>
-              <span>·</span>
-              <span>{following.length} following</span>
+
+            {/* Center: Feed Tabs */}
+            <div className="flex items-center gap-1 bg-muted rounded-full p-1">
+              <button
+                onClick={() => setFeedType('foryou')}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  feedType === 'foryou' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                For You
+              </button>
+              <button
+                onClick={() => setFeedType('following')}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  feedType === 'following' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Following
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Post Composer */}
-            <PostComposer onPost={createPost} />
-
-            {/* Feed Tabs */}
-            <Tabs value={feedType} onValueChange={(v) => setFeedType(v as 'all' | 'following')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="all" className="gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Discover
-                </TabsTrigger>
-                <TabsTrigger value="following" className="gap-2">
-                  <Users className="w-4 h-4" />
-                  Following
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value={feedType} className="mt-6 space-y-4">
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="w-10 h-10 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-3 w-16" />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Search className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80">
+                  <SheetHeader>
+                    <SheetTitle>Discover People</SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(100vh-100px)] mt-4">
+                    <div className="space-y-3 pr-4">
+                      {loadingSuggestions ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <Skeleton className="w-12 h-12 rounded-full" />
+                            <div className="flex-1">
+                              <Skeleton className="h-4 w-24 mb-1" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
                           </div>
-                        </div>
-                        <Skeleton className="h-16 w-full" />
-                      </div>
-                    ))}
-                  </div>
-                ) : filteredPosts.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12"
-                  >
-                    <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">
-                      {feedType === 'following' ? 'No posts from people you follow' : 'No posts yet'}
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      {feedType === 'following' 
-                        ? 'Follow some people to see their posts here'
-                        : 'Be the first to share something!'}
-                    </p>
-                    {feedType === 'following' && (
-                      <Button onClick={() => setFeedType('all')}>
-                        Discover People
-                      </Button>
-                    )}
-                  </motion.div>
-                ) : (
-                  filteredPosts.map(post => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onLike={toggleLikePost}
-                      onDelete={deletePost}
-                      onFollow={followUser}
-                      isFollowing={isFollowing(post.user_id)}
-                      onGetComments={getPostComments}
-                      onAddComment={addComment}
-                    />
-                  ))
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Suggested Users */}
-            <div className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <UserPlus className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold">Suggested for You</h3>
-              </div>
-              
-              {loadingSuggestions ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-20 mb-1" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
+                        ))
+                      ) : suggestedUsers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          No suggestions right now
+                        </p>
+                      ) : (
+                        suggestedUsers.map(profile => (
+                          <motion.div
+                            key={profile.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors cursor-pointer"
+                            onClick={() => goToProfile(profile.user_id)}
+                          >
+                            <Avatar className="w-12 h-12">
+                              <AvatarImage src={profile.profile_picture_url || ''} />
+                              <AvatarFallback className="bg-primary/20 text-primary">
+                                {profile.profile_name?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{profile.profile_name}</p>
+                              {profile.bio && (
+                                <p className="text-xs text-muted-foreground truncate">{profile.bio}</p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={isFollowing(profile.user_id) ? 'secondary' : 'default'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                followUser(profile.user_id);
+                              }}
+                            >
+                              {isFollowing(profile.user_id) ? 'Following' : 'Follow'}
+                            </Button>
+                          </motion.div>
+                        ))
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : suggestedUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No suggestions right now
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {suggestedUsers.map(profile => (
-                    <UserCard
-                      key={profile.id}
-                      profile={profile}
-                      isFollowing={isFollowing(profile.user_id)}
-                      onFollow={followUser}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="bg-card border border-border rounded-xl p-4">
-              <h3 className="font-semibold mb-4">Your Activity</h3>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="p-3 bg-background/50 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">{posts.filter(p => p.user_id === user?.id).length}</p>
-                  <p className="text-xs text-muted-foreground">Posts</p>
-                </div>
-                <div className="p-3 bg-background/50 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">{following.length}</p>
-                  <p className="text-xs text-muted-foreground">Following</p>
-                </div>
-              </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Main Feed - Vertical Scroll Snap */}
+      <div 
+        ref={feedRef}
+        className="flex-1 overflow-y-auto snap-y snap-mandatory scroll-smooth"
+        onScroll={handleScroll}
+        style={{ scrollSnapType: 'y mandatory' }}
+      >
+        {isLoading ? (
+          <div className="h-[calc(100vh-180px)] flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading your feed...</p>
+            </div>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="h-[calc(100vh-180px)] flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center max-w-sm"
+            >
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                {feedType === 'following' ? (
+                  <Users className="w-10 h-10 text-primary" />
+                ) : (
+                  <Compass className="w-10 h-10 text-primary" />
+                )}
+              </div>
+              <h3 className="font-bold text-xl mb-2">
+                {feedType === 'following' ? 'Follow music fans' : 'Be the first!'}
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                {feedType === 'following' 
+                  ? 'Follow people to see their music shares and activity here'
+                  : 'Share what you\'re listening to and start the conversation'}
+              </p>
+              <div className="flex gap-3 justify-center">
+                {feedType === 'following' ? (
+                  <Button onClick={() => setFeedType('foryou')}>
+                    <Compass className="w-4 h-4 mr-2" />
+                    Discover
+                  </Button>
+                ) : (
+                  <Button onClick={() => setShowComposer(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Post
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="max-w-lg mx-auto px-2">
+            {filteredPosts.map((post, index) => (
+              <div 
+                key={post.id} 
+                className="snap-start py-2"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <MusicFeedCard
+                  post={post}
+                  onLike={toggleLikePost}
+                  onFollow={followUser}
+                  isFollowing={isFollowing(post.user_id)}
+                  onComment={() => handleOpenComments(post.id)}
+                  isVisible={index === currentPostIndex}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Floating Create Button */}
+      <motion.button
+        className="fixed right-4 bottom-24 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-30"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setShowComposer(true)}
+      >
+        <Plus className="w-6 h-6" />
+      </motion.button>
+
+      {/* Post Composer Modal */}
+      <AnimatePresence>
+        {showComposer && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowComposer(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-background rounded-t-3xl z-50 p-4 pb-8"
+            >
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+              </div>
+              <PostComposer 
+                onPost={async (content, type, songId) => {
+                  await createPost(content, type, songId);
+                  setShowComposer(false);
+                }} 
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Comment Sheet */}
+      <CommentSheet
+        isOpen={commentSheet.isOpen}
+        onClose={() => setCommentSheet({ isOpen: false, postId: null })}
+        comments={currentComments}
+        isLoading={loadingComments}
+        onAddComment={handleAddComment}
+        commentsCount={currentCommentsCount}
+      />
 
       <Navigation />
     </div>
