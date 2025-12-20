@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart } from 'lucide-react';
+import { Play, Pause, Heart, Sparkles } from 'lucide-react';
 import { Song } from '@/data/musicData';
 import { usePlayer } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
+import { AIArtwork } from './AIArtwork';
 
 interface SongCardProps {
   song: Song;
@@ -103,7 +104,7 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
         whileHover={{ y: -4, scale: 1.02 }}
-        className="group relative overflow-hidden rounded-2xl glass-card p-5 cursor-pointer shine-overlay"
+        className="group relative overflow-hidden rounded-2xl glass-card cursor-pointer shine-overlay"
         onClick={handlePlay}
       >
         {/* Ambient glow on hover */}
@@ -111,12 +112,31 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
           <div className="absolute inset-0 gradient-glow" />
         </div>
 
-        <div className="relative z-10">
-          <div className="flex items-start justify-between mb-5 gap-3">
+        {/* AI Artwork section */}
+        <div className="relative aspect-[4/3] overflow-hidden">
+          {isCurrentSong ? (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-cyan-400/10">
+              <SpinningSongArt isPlaying={isPlaying} size="xl" />
+            </div>
+          ) : (
+            <AIArtwork
+              songTitle={song.title}
+              artistName={song.artist}
+              fallbackImage={song.coverImage}
+              className="w-full h-full rounded-none"
+              showGenerateButton={true}
+            />
+          )}
+          
+          {/* Play button overlay */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center bg-background/30 opacity-0 group-hover:opacity-100 transition-opacity"
+            initial={false}
+          >
             <motion.div
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center shadow-glow flex-shrink-0"
+              className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-glow-intense"
             >
               {isCurrentSong && isPlaying ? (
                 <Pause className="w-6 h-6 text-primary-foreground" />
@@ -124,6 +144,17 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
                 <Play className="w-6 h-6 text-primary-foreground ml-0.5" />
               )}
             </motion.div>
+          </motion.div>
+        </div>
+
+        <div className="relative z-10 p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-heading font-semibold text-foreground truncate">
+                {song.title}
+              </h3>
+              <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+            </div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -132,18 +163,13 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
                 toggleLike(song.id);
               }}
               className={cn(
-                "p-2.5 rounded-xl transition-all flex-shrink-0",
+                "p-2 rounded-xl transition-all flex-shrink-0",
                 liked ? "bg-primary/20 text-primary" : "glass text-muted-foreground hover:text-foreground"
               )}
             >
               <Heart className={cn("w-4 h-4", liked && "fill-current")} />
             </motion.button>
           </div>
-
-          <h3 className="text-lg font-heading font-semibold text-foreground mb-1 truncate">
-            {song.title}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4 truncate">{song.artist}</p>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="tabular-nums">{song.plays.toLocaleString()} plays</span>
