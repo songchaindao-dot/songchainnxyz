@@ -6,5 +6,10 @@
   "homeUrl": "https://songchainn.xyz",
   "frame": {
     "url": "https://songchainn.xyz"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwODg5OTYsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDA5OGZkMjVlM0Y5NDI4MjA5NjE2OWU3Njc2NUJEOEQzRTRlMDc3In0",
+    "payload": "eyJkb21haW4iOiJzb25nY2hhaW5uLnh5eiJ9",
+    "signature": "JlNDfplN5VVH25xbNyiMvLm8mT/Jnx1Ze8MtLCevOr0EwTPt9IWwkkBjltQ6jGfyVrMsdsWagOXTQauhB0ZtnBs="
   }
 }
