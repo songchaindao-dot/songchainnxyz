@@ -4,7 +4,7 @@ import { usePlayer } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -13,6 +13,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import songArtVideo from '@/assets/song-art.mp4';
+
+function FullScreenVideoArt({ isPlaying }: { isPlaying: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={songArtVideo}
+      loop
+      muted
+      playsInline
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -206,21 +232,9 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
                 className="relative w-full max-w-[320px] aspect-square mb-8"
               >
                 <div className="absolute inset-0 rounded-3xl shadow-glow-intense opacity-60" />
-                <motion.div
-                  className="relative w-full h-full rounded-3xl overflow-hidden glass-card shine-overlay"
-                  animate={isPlaying ? { rotate: 360 } : {}}
-                  transition={isPlaying ? { duration: 20, repeat: Infinity, ease: 'linear' } : {}}
-                  style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
-                >
-                  <video
-                    src={songArtVideo}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
+                <div className="relative w-full h-full rounded-3xl overflow-hidden glass-card shine-overlay">
+                  <FullScreenVideoArt isPlaying={isPlaying} />
+                </div>
 
                 {/* Vinyl ring effect (optional decorative) */}
                 <div className="absolute inset-0 rounded-3xl border border-foreground/5 pointer-events-none" />
