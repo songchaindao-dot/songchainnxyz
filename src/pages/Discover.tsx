@@ -1,0 +1,392 @@
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Compass, Sparkles, TrendingUp, Heart, Shuffle, Filter } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { SONGS, GENRES, Genre } from '@/data/musicData';
+import { useRankedSongs } from '@/hooks/usePopularity';
+import { SongCard } from '@/components/SongCard';
+import { Navigation } from '@/components/Navigation';
+import { AudioPlayer } from '@/components/AudioPlayer';
+import { AnimatedBackground } from '@/components/ui/animated-background';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
+
+// Hook to get user's liked songs for recommendations
+function useUserLikes() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['user-likes', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('liked_songs')
+        .select('song_id')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      return data.map(item => item.song_id);
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export default function Discover() {
+  const [selectedGenre, setSelectedGenre] = useState<Genre | 'all'>('all');
+  const [showFilters, setShowFilters] = useState(true);
+  const { rankedSongs } = useRankedSongs();
+  const { data: likedSongIds = [] } = useUserLikes();
+
+  // Get user's preferred genres based on likes
+  const preferredGenres = useMemo(() => {
+    const genreCounts: Record<Genre, number> = {
+      'Afrobeats': 0,
+      'Reggae': 0,
+      'Hip-Hop': 0,
+      'Soul': 0,
+      'Electronic': 0,
+      'R&B': 0,
+    };
+
+    likedSongIds.forEach(songId => {
+      const song = SONGS.find(s => s.id === songId);
+      if (song) {
+        genreCounts[song.genre]++;
+      }
+    });
+
+    return Object.entries(genreCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([genre]) => genre as Genre);
+  }, [likedSongIds]);
+
+  // Filter songs by selected genre
+  const filteredSongs = useMemo(() => {
+    if (selectedGenre === 'all') return rankedSongs;
+    return rankedSongs.filter(song => song.genre === selectedGenre);
+  }, [rankedSongs, selectedGenre]);
+
+  // Personalized recommendations based on liked genres
+  const recommendedSongs = useMemo(() => {
+    if (preferredGenres.length === 0) {
+      // If no likes, show top trending songs
+      return rankedSongs.slice(0, 3);
+    }
+
+    // Prioritize songs from preferred genres that user hasn't liked yet
+    const unlikedSongs = rankedSongs.filter(song => !likedSongIds.includes(song.id));
+    const recommended = unlikedSongs
+      .sort((a, b) => {
+        const aGenreIndex = preferredGenres.indexOf(a.genre);
+        const bGenreIndex = preferredGenres.indexOf(b.genre);
+        // Songs from preferred genres come first
+        if (aGenreIndex !== -1 && bGenreIndex === -1) return -1;
+        if (aGenreIndex === -1 && bGenreIndex !== -1) return 1;
+        if (aGenreIndex !== -1 && bGenreIndex !== -1) return aGenreIndex - bGenreIndex;
+        return 0;
+      })
+      .slice(0, 3);
+
+    return recommended.length > 0 ? recommended : rankedSongs.slice(0, 3);
+  }, [rankedSongs, preferredGenres, likedSongIds]);
+
+  // Get a random selection for "shuffle" discovery
+  const shuffledSongs = useMemo(() => {
+    return [...rankedSongs].sort(() => Math.random() - 0.5).slice(0, 4);
+  }, [rankedSongs]);
+
+  const getGenreColor = (genre: Genre) => {
+    const colors: Record<Genre, string> = {
+      'Afrobeats': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'Reggae': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'Hip-Hop': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      'Soul': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+      'Electronic': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      'R&B': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+    };
+    return colors[genre];
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-24 relative">
+      <AnimatedBackground variant="default" />
+      <Navigation />
+
+      <main className="container mx-auto px-4 py-8 relative z-10">
+        {/* Page Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl gradient-primary">
+              <Compass className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <h1 className="font-heading text-3xl font-bold text-foreground">Discover</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Explore new music, filter by genre, and get personalized recommendations
+          </p>
+        </motion.div>
+
+        {/* Genre Filters */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-10"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Filter by Genre</span>
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showFilters ? 'Hide' : 'Show'}
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-wrap gap-2"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedGenre('all')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    selectedGenre === 'all'
+                      ? 'gradient-primary text-primary-foreground shadow-glow'
+                      : 'glass text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All Genres
+                </motion.button>
+                {GENRES.map((genre) => (
+                  <motion.button
+                    key={genre}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedGenre(genre)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
+                      selectedGenre === genre
+                        ? getGenreColor(genre)
+                        : 'glass text-muted-foreground hover:text-foreground border-transparent'
+                    }`}
+                  >
+                    {genre}
+                    {preferredGenres.includes(genre) && (
+                      <Heart className="w-3 h-3 ml-1.5 inline fill-current" />
+                    )}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.section>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-10">
+            {/* For You - Personalized Recommendations */}
+            <motion.section
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+            >
+              <motion.div variants={itemVariants} className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h2 className="font-heading text-xl font-semibold text-foreground">For You</h2>
+                {preferredGenres.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    Based on your {preferredGenres[0]} likes
+                  </Badge>
+                )}
+              </motion.div>
+              <div className="grid gap-3">
+                {recommendedSongs.map((song, index) => (
+                  <motion.div key={song.id} variants={itemVariants}>
+                    <SongCard song={song} index={index} variant="compact" />
+                  </motion.div>
+                ))}
+              </div>
+              {recommendedSongs.length === 0 && (
+                <motion.p variants={itemVariants} className="text-muted-foreground text-sm py-4">
+                  Like some songs to get personalized recommendations!
+                </motion.p>
+              )}
+            </motion.section>
+
+            {/* Filtered Songs / All Songs */}
+            <motion.section
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+            >
+              <motion.div variants={itemVariants} className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <h2 className="font-heading text-xl font-semibold text-foreground">
+                    {selectedGenre === 'all' ? 'Trending Now' : selectedGenre}
+                  </h2>
+                  <span className="text-sm text-muted-foreground">
+                    ({filteredSongs.length} songs)
+                  </span>
+                </div>
+              </motion.div>
+
+              <AnimatePresence mode="popLayout">
+                <div className="space-y-2">
+                  {filteredSongs.map((song, index) => (
+                    <motion.div
+                      key={song.id}
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                      exit={{ opacity: 0, x: -20 }}
+                      layout
+                    >
+                      <SongCard song={song} index={index} variant="compact" />
+                    </motion.div>
+                  ))}
+                </div>
+              </AnimatePresence>
+
+              {filteredSongs.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12 glass-card rounded-2xl"
+                >
+                  <p className="text-muted-foreground">No songs in this genre yet</p>
+                </motion.div>
+              )}
+            </motion.section>
+          </div>
+
+          {/* Sidebar */}
+          <motion.aside
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Shuffle Discovery */}
+            <div className="glass-card rounded-3xl p-6 shine-overlay">
+              <div className="flex items-center gap-2 mb-4">
+                <Shuffle className="w-5 h-5 text-primary" />
+                <h3 className="font-heading font-semibold text-foreground">Surprise Me</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Random picks to discover something new
+              </p>
+              <div className="space-y-2">
+                {shuffledSongs.slice(0, 3).map((song) => (
+                  <div
+                    key={song.id}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => {
+                      // Could trigger play here
+                    }}
+                  >
+                    <img
+                      src={song.coverImage}
+                      alt={song.title}
+                      className="w-10 h-10 rounded-lg object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{song.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] ${getGenreColor(song.genre)}`}>
+                      {song.genre}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Genre Stats */}
+            <div className="glass-card rounded-3xl p-6 shine-overlay">
+              <h3 className="font-heading font-semibold text-foreground mb-4">Genre Overview</h3>
+              <div className="space-y-3">
+                {GENRES.map((genre) => {
+                  const count = SONGS.filter(s => s.genre === genre).length;
+                  const percentage = (count / SONGS.length) * 100;
+                  return (
+                    <div key={genre}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-foreground">{genre}</span>
+                        <span className="text-xs text-muted-foreground">{count} songs</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                          className={`h-full rounded-full ${getGenreColor(genre).split(' ')[0]}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Your Taste */}
+            {preferredGenres.length > 0 && (
+              <div className="glass-card rounded-3xl p-6 shine-overlay">
+                <div className="flex items-center gap-2 mb-4">
+                  <Heart className="w-5 h-5 text-primary fill-primary" />
+                  <h3 className="font-heading font-semibold text-foreground">Your Taste</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Based on the songs you've liked
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {preferredGenres.map((genre, index) => (
+                    <Badge
+                      key={genre}
+                      variant="outline"
+                      className={`${getGenreColor(genre as Genre)} ${index === 0 ? 'border-2' : ''}`}
+                    >
+                      {index === 0 && <span className="mr-1">👑</span>}
+                      {genre}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.aside>
+        </div>
+      </main>
+
+      <AudioPlayer />
+    </div>
+  );
+}

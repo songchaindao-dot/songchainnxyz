@@ -10,6 +10,7 @@ import { EngagementProvider } from "@/context/EngagementContext";
 
 // Lazy load pages for better initial load performance
 const Home = lazy(() => import("./pages/Home"));
+const Discover = lazy(() => import("./pages/Discover"));
 const Artists = lazy(() => import("./pages/Artists"));
 const ArtistDetail = lazy(() => import("./pages/ArtistDetail"));
 const Education = lazy(() => import("./pages/Education"));
@@ -72,6 +73,7 @@ function AppContent() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/discover" element={<Discover />} />
               <Route path="/artists" element={<Artists />} />
               <Route path="/artist/:id" element={<ArtistDetail />} />
               <Route path="/education" element={<Education />} />

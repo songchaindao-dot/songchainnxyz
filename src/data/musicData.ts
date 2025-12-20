@@ -9,6 +9,10 @@ import artistPrp from '@/assets/artist-prp.png';
 import artistSanchy from '@/assets/artist-sanchy.png';
 import artistSantana from '@/assets/artist-santana.png';
 
+export type Genre = 'Afrobeats' | 'Reggae' | 'Hip-Hop' | 'Soul' | 'Electronic' | 'R&B';
+
+export const GENRES: Genre[] = ['Afrobeats', 'Reggae', 'Hip-Hop', 'Soul', 'Electronic', 'R&B'];
+
 export interface Song {
   id: string;
   title: string;
@@ -20,6 +24,7 @@ export interface Song {
   plays: number;
   likes: number;
   townSquare: string;
+  genre: Genre;
 }
 
 export interface Artist {
@@ -63,6 +68,7 @@ export const SONGS: Song[] = [
     plays: 1247,
     likes: 342,
     townSquare: 'Livingstone Town Square',
+    genre: 'Electronic',
   },
   {
     id: '2',
@@ -74,6 +80,7 @@ export const SONGS: Song[] = [
     plays: 892,
     likes: 256,
     townSquare: 'Livingstone Town Square',
+    genre: 'Reggae',
   },
   {
     id: '3',
@@ -85,6 +92,7 @@ export const SONGS: Song[] = [
     plays: 2103,
     likes: 567,
     townSquare: 'Livingstone Town Square',
+    genre: 'Afrobeats',
   },
   {
     id: '4',
@@ -96,6 +104,7 @@ export const SONGS: Song[] = [
     plays: 756,
     likes: 198,
     townSquare: 'Livingstone Town Square',
+    genre: 'Soul',
   },
   {
     id: '5',
@@ -107,6 +116,7 @@ export const SONGS: Song[] = [
     plays: 1534,
     likes: 423,
     townSquare: 'Livingstone Town Square',
+    genre: 'Hip-Hop',
   },
   {
     id: '6',
@@ -118,6 +128,7 @@ export const SONGS: Song[] = [
     plays: 1089,
     likes: 312,
     townSquare: 'Livingstone Town Square',
+    genre: 'R&B',
   },
   {
     id: '7',
@@ -129,6 +140,7 @@ export const SONGS: Song[] = [
     plays: 1876,
     likes: 489,
     townSquare: 'Livingstone Town Square',
+    genre: 'Hip-Hop',
   },
 ];
 
