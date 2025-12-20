@@ -81,7 +81,7 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
 
   const handleShareToX = () => {
     if (currentSong) {
-      const text = `🎵 Listening to "${currentSong.title}" by ${currentSong.artist} on @SongChainn`;
+      const text = `🎵 Listening to "${currentSong.title}" by ${currentSong.artist} on @$ongChainn`;
       const url = getShareUrl('song', currentSong.id);
       shareToX(text, url);
     }

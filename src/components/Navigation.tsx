@@ -61,14 +61,14 @@ export function Navigation() {
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group ml-2">
               <motion.img
                 src={logo}
-                alt="SongChainn"
+                alt="$ongChainn"
                 className="w-9 h-9 object-contain"
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 400 }}
               />
               <div className="hidden xs:block">
                 <span className="font-heading font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                  SongChainn
+                  $ongChainn
                 </span>
                 <span className="hidden lg:inline text-xs text-primary ml-2 font-medium px-2 py-0.5 rounded-full bg-primary/10">
                   Audience

@@ -259,7 +259,7 @@ export default function Auth() {
         <div className="text-center mb-8">
           <motion.img
             src={logo}
-            alt="SongChainn"
+            alt="$ongChainn"
             className="h-20 mx-auto mb-6"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -271,7 +271,7 @@ export default function Auth() {
             transition={{ delay: 0.1 }}
             className="font-heading text-3xl font-bold text-foreground mb-2"
           >
-            Welcome to SongChainn
+            Welcome to $ongChainn
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -314,7 +314,7 @@ export default function Auth() {
                     <code className="text-sm font-mono text-foreground">{formatAddress(connectedAddress)}</code>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">Entering SongChainn...</p>
+                <p className="text-sm text-muted-foreground">Entering $ongChainn...</p>
                 <div className="mt-4"><Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" /></div>
               </motion.div>
             ) : authView === 'connect-wallet' ? (
@@ -327,14 +327,14 @@ export default function Auth() {
                     Connect Your Base Wallet
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Base Wallet is required to access and listen to music on SongChainn.
+                    Base Wallet is required to access and listen to music on $ongChainn.
                   </p>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-6">
                   <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your Base Wallet supports culture, identity, and future ownership on SongChainn. 
+                    Your Base Wallet supports culture, identity, and future ownership on $ongChainn. 
                     Music streaming requires wallet verification.
                   </p>
                 </div>

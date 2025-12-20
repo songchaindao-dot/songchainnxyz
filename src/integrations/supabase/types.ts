@@ -21,6 +21,7 @@ export type Database = {
           cover_photo_url: string | null
           created_at: string
           id: string
+          is_public: boolean
           onboarding_completed: boolean
           profile_name: string
           profile_picture_url: string | null
@@ -34,6 +35,7 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           onboarding_completed?: boolean
           profile_name: string
           profile_picture_url?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           cover_photo_url?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           onboarding_completed?: boolean
           profile_name?: string
           profile_picture_url?: string | null
@@ -326,6 +329,42 @@ export type Database = {
           },
         ]
       }
+      profile_views: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          viewer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          viewer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "audience_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile_popularity"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           completed_at: string | null
@@ -399,6 +438,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      song_analytics: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          song_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          song_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          song_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       song_comments: {
         Row: {
@@ -513,7 +576,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profile_popularity: {
+        Row: {
+          bio: string | null
+          follower_count: number | null
+          popularity_score: number | null
+          post_count: number | null
+          profile_id: string | null
+          profile_name: string | null
+          profile_picture_url: string | null
+          total_post_likes: number | null
+          user_id: string | null
+          view_count: number | null
+        }
+        Insert: {
+          bio?: string | null
+          follower_count?: never
+          popularity_score?: never
+          post_count?: never
+          profile_id?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          total_post_likes?: never
+          user_id?: string | null
+          view_count?: never
+        }
+        Update: {
+          bio?: string | null
+          follower_count?: never
+          popularity_score?: never
+          post_count?: never
+          profile_id?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          total_post_likes?: never
+          user_id?: string | null
+          view_count?: never
+        }
+        Relationships: []
+      }
+      song_popularity: {
+        Row: {
+          comment_count: number | null
+          like_count: number | null
+          play_count: number | null
+          popularity_score: number | null
+          share_count: number | null
+          song_id: string | null
+          view_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       complete_referral: {
@@ -527,6 +640,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_referral_code: { Args: { code: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "audience"
