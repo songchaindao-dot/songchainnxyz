@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Edit3, Save, X as XIcon, ExternalLink, Heart, ListMusic, Loader2 } from 'lucide-react';
+import { Camera, Edit3, Save, X as XIcon, ExternalLink, Heart, ListMusic, Loader2, Gift, Star, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { useAudienceInteractions } from '@/hooks/useAudienceInteractions';
+import { useReferrals } from '@/hooks/useReferrals';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Navigation } from '@/components/Navigation';
 import { SONGS } from '@/data/musicData';
+import { InviteFriends } from '@/components/InviteFriends';
 
 // X (Twitter) and Base icons
 const XTwitterIcon = () => (
@@ -28,7 +30,9 @@ const BaseIcon = () => (
 export default function Profile() {
   const { user, audienceProfile, refreshProfile } = useAuth();
   const { likedSongs, playlists } = useAudienceInteractions();
+  const { points, completedReferrals, shareInviteLink } = useReferrals();
   const { toast } = useToast();
+  const [showInviteModal, setShowInviteModal] = useState(false);
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -325,7 +329,7 @@ export default function Profile() {
         )}
 
         {/* Activity Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div className="bg-card border border-border rounded-xl p-4 text-center">
             <Heart className="w-5 h-5 mx-auto text-primary mb-2" />
             <p className="text-2xl font-bold text-foreground">{likedSongs.length}</p>
@@ -336,7 +340,49 @@ export default function Profile() {
             <p className="text-2xl font-bold text-foreground">{playlists.length}</p>
             <p className="text-sm text-muted-foreground">Playlists</p>
           </div>
+          <div className="bg-card border border-border rounded-xl p-4 text-center">
+            <Star className="w-5 h-5 mx-auto text-primary mb-2" />
+            <p className="text-2xl font-bold text-foreground">{points?.total_points || 0}</p>
+            <p className="text-sm text-muted-foreground">Points</p>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4 text-center">
+            <Users className="w-5 h-5 mx-auto text-primary mb-2" />
+            <p className="text-2xl font-bold text-foreground">{completedReferrals}</p>
+            <p className="text-sm text-muted-foreground">Referrals</p>
+          </div>
         </div>
+
+        {/* Invite Friends Section */}
+        <motion.div 
+          className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 rounded-xl p-5 mb-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-primary/20">
+              <Gift className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-heading font-semibold text-foreground">Invite Friends</h3>
+              <p className="text-sm text-muted-foreground">Earn 100 points for each friend who joins!</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => setShowInviteModal(true)}
+              variant="outline"
+              className="flex-1"
+            >
+              View Details
+            </Button>
+            <Button 
+              onClick={shareInviteLink}
+              className="flex-1 gradient-primary"
+            >
+              Share Invite
+            </Button>
+          </div>
+        </motion.div>
 
         {/* Liked Songs Preview */}
         {likedSongsData.length > 0 && (
@@ -375,6 +421,7 @@ export default function Profile() {
       </div>
 
       <Navigation />
+      <InviteFriends isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} />
     </div>
   );
 }
