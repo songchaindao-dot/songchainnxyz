@@ -42,7 +42,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
   const playNextRef = useRef<() => void>(() => {});
+  const crossfadeTriggeredRef = useRef(false);
   const crossfadeDuration = 2000; // 2 second crossfade
+  const crossfadeThreshold = 2; // Start crossfade 2 seconds before song ends
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -52,22 +54,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
-    // Throttle timeupdate to reduce re-renders
-    let lastUpdate = 0;
+    // Check for crossfade trigger point (2 seconds before end)
     const handleTimeUpdate = () => {
       const now = Date.now();
-      if (now - lastUpdate > 500) { // Update every 500ms instead of every tick
-        setCurrentTime(audio.currentTime);
-        lastUpdate = now;
+      setCurrentTime(audio.currentTime);
+      
+      // Trigger crossfade when approaching end of song
+      const timeRemaining = audio.duration - audio.currentTime;
+      if (
+        !crossfadeTriggeredRef.current && 
+        audio.duration > 0 && 
+        timeRemaining <= crossfadeThreshold && 
+        timeRemaining > 0
+      ) {
+        crossfadeTriggeredRef.current = true;
+        playNextRef.current();
       }
     };
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
+      // Reset crossfade trigger when new song loads
+      crossfadeTriggeredRef.current = false;
     };
 
     const handleEnded = () => {
-      playNextRef.current();
+      // Only trigger if crossfade wasn't already started
+      if (!crossfadeTriggeredRef.current) {
+        playNextRef.current();
+      }
+      crossfadeTriggeredRef.current = false;
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
