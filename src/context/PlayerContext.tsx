@@ -1,13 +1,19 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
 
-interface PlayerContextType {
+// Split context for better performance - components only re-render for what they need
+interface PlayerStateContext {
   currentSong: Song | null;
   isPlaying: boolean;
+  queue: Song[];
+}
+
+interface PlayerTimeContext {
   currentTime: number;
   duration: number;
-  volume: number;
-  queue: Song[];
+}
+
+interface PlayerActionsContext {
   playSong: (song: Song) => void;
   togglePlay: () => void;
   pause: () => void;
@@ -17,9 +23,12 @@ interface PlayerContextType {
   playNext: () => void;
   playPrevious: () => void;
   addToQueue: (song: Song) => void;
+  volume: number;
 }
 
-const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
+const PlayerStateCtx = createContext<PlayerStateContext | undefined>(undefined);
+const PlayerTimeCtx = createContext<PlayerTimeContext | undefined>(undefined);
+const PlayerActionsCtx = createContext<PlayerActionsContext | undefined>(undefined);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -30,8 +39,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<Song[]>(SONGS);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Store playNext in a ref to avoid stale closure issues
   const playNextRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -40,8 +47,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
+    // Throttle timeupdate to reduce re-renders
+    let lastUpdate = 0;
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      const now = Date.now();
+      if (now - lastUpdate > 500) { // Update every 500ms instead of every tick
+        setCurrentTime(audio.currentTime);
+        lastUpdate = now;
+      }
     };
 
     const handleLoadedMetadata = () => {
@@ -49,7 +62,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
 
     const handleEnded = () => {
-      // Use ref to get the latest playNext function
       playNextRef.current();
     };
 
@@ -76,14 +88,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const togglePlay = useCallback(() => {
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
+      if (audioRef.current.paused) {
         audioRef.current.play();
+        setIsPlaying(true);
+      } else {
+        audioRef.current.pause();
+        setIsPlaying(false);
       }
-      setIsPlaying(!isPlaying);
     }
-  }, [isPlaying]);
+  }, []);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
@@ -121,7 +134,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentSong, queue, playSong]);
 
-  // Keep the ref updated with the latest playNext function
   useEffect(() => {
     playNextRef.current = playNext;
   }, [playNext]);
@@ -138,33 +150,78 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue(prev => [...prev, song]);
   }, []);
 
+  // Memoize context values to prevent unnecessary re-renders
+  const stateValue = useMemo(() => ({
+    currentSong,
+    isPlaying,
+    queue,
+  }), [currentSong, isPlaying, queue]);
+
+  const timeValue = useMemo(() => ({
+    currentTime,
+    duration,
+  }), [currentTime, duration]);
+
+  const actionsValue = useMemo(() => ({
+    playSong,
+    togglePlay,
+    pause,
+    play,
+    seekTo,
+    setVolume,
+    playNext,
+    playPrevious,
+    addToQueue,
+    volume,
+  }), [playSong, togglePlay, pause, play, seekTo, setVolume, playNext, playPrevious, addToQueue, volume]);
+
   return (
-    <PlayerContext.Provider value={{
-      currentSong,
-      isPlaying,
-      currentTime,
-      duration,
-      volume,
-      queue,
-      playSong,
-      togglePlay,
-      pause,
-      play,
-      seekTo,
-      setVolume,
-      playNext,
-      playPrevious,
-      addToQueue,
-    }}>
-      {children}
-    </PlayerContext.Provider>
+    <PlayerStateCtx.Provider value={stateValue}>
+      <PlayerTimeCtx.Provider value={timeValue}>
+        <PlayerActionsCtx.Provider value={actionsValue}>
+          {children}
+        </PlayerActionsCtx.Provider>
+      </PlayerTimeCtx.Provider>
+    </PlayerStateCtx.Provider>
   );
 }
 
-export function usePlayer() {
-  const context = useContext(PlayerContext);
+// Hook for components that need player state (song, playing status)
+export function usePlayerState() {
+  const context = useContext(PlayerStateCtx);
   if (context === undefined) {
-    throw new Error('usePlayer must be used within a PlayerProvider');
+    throw new Error('usePlayerState must be used within a PlayerProvider');
   }
   return context;
+}
+
+// Hook for components that need time updates (progress bar, time display)
+export function usePlayerTime() {
+  const context = useContext(PlayerTimeCtx);
+  if (context === undefined) {
+    throw new Error('usePlayerTime must be used within a PlayerProvider');
+  }
+  return context;
+}
+
+// Hook for components that need player actions
+export function usePlayerActions() {
+  const context = useContext(PlayerActionsCtx);
+  if (context === undefined) {
+    throw new Error('usePlayerActions must be used within a PlayerProvider');
+  }
+  return context;
+}
+
+// Combined hook for backwards compatibility
+export function usePlayer() {
+  const state = usePlayerState();
+  const time = usePlayerTime();
+  const actions = usePlayerActions();
+  
+  return {
+    ...state,
+    ...time,
+    ...actions,
+  };
 }

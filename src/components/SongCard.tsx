@@ -1,7 +1,8 @@
+import { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart, Sparkles } from 'lucide-react';
+import { Play, Pause, Heart } from 'lucide-react';
 import { Song } from '@/data/musicData';
-import { usePlayer } from '@/context/PlayerContext';
+import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
@@ -13,20 +14,27 @@ interface SongCardProps {
   variant?: 'default' | 'compact' | 'featured';
 }
 
-export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps) {
-  const { currentSong, isPlaying, playSong, togglePlay } = usePlayer();
+// Memoized component to prevent unnecessary re-renders
+export const SongCard = memo(function SongCard({ song, index = 0, variant = 'default' }: SongCardProps) {
+  const { currentSong, isPlaying } = usePlayerState();
+  const { playSong, togglePlay } = usePlayerActions();
   const { toggleLike, isLiked } = useEngagement();
 
   const isCurrentSong = currentSong?.id === song.id;
   const liked = isLiked(song.id);
 
-  const handlePlay = () => {
+  const handlePlay = useCallback(() => {
     if (isCurrentSong) {
       togglePlay();
     } else {
       playSong(song);
     }
-  };
+  }, [isCurrentSong, togglePlay, playSong, song]);
+
+  const handleLike = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleLike(song.id);
+  }, [toggleLike, song.id]);
 
   if (variant === 'compact') {
     return (
@@ -49,7 +57,12 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
           ) : (
             <>
               {song.coverImage ? (
-                <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+                <img 
+                  src={song.coverImage} 
+                  alt={song.title} 
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
               ) : (
                 <div className="w-full h-full gradient-primary opacity-60" />
               )}
@@ -81,10 +94,7 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike(song.id);
-            }}
+            onClick={handleLike}
             className={cn(
               "p-2 rounded-full transition-all",
               liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -158,10 +168,7 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleLike(song.id);
-              }}
+              onClick={handleLike}
               className={cn(
                 "p-2 rounded-xl transition-all flex-shrink-0",
                 liked ? "bg-primary/20 text-primary" : "glass text-muted-foreground hover:text-foreground"
@@ -197,7 +204,12 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
         ) : (
           <>
             {song.coverImage ? (
-              <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover" />
+              <img 
+                src={song.coverImage} 
+                alt={song.title} 
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
             ) : (
               <div className="absolute inset-0 gradient-primary opacity-40" />
             )}
@@ -239,10 +251,7 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike(song.id);
-            }}
+            onClick={handleLike}
             className={cn(
               "p-2 rounded-full transition-all -mr-2",
               liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
@@ -254,4 +263,4 @@ export function SongCard({ song, index = 0, variant = 'default' }: SongCardProps
       </div>
     </motion.div>
   );
-}
+});

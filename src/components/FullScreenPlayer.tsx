@@ -1,10 +1,10 @@
+import { memo, useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Share2, ListMusic, Shuffle, Repeat, Repeat1, Copy, Check } from 'lucide-react';
-import { usePlayer } from '@/context/PlayerContext';
+import { usePlayerState, usePlayerActions, usePlayerTime } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import songArtVideo from '@/assets/song-art.mp4';
 
-function FullScreenVideoArt({ isPlaying }: { isPlaying: boolean }) {
+const FullScreenVideoArt = memo(function FullScreenVideoArt({ isPlaying }: { isPlaying: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ function FullScreenVideoArt({ isPlaying }: { isPlaying: boolean }) {
       className="w-full h-full object-cover"
     />
   );
-}
+});
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
@@ -51,20 +51,10 @@ interface FullScreenPlayerProps {
   onClose: () => void;
 }
 
-export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
-  const {
-    currentSong,
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    togglePlay,
-    seekTo,
-    setVolume,
-    playNext,
-    playPrevious,
-    queue,
-  } = usePlayer();
+export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
+  const { currentSong, isPlaying, queue } = usePlayerState();
+  const { currentTime, duration } = usePlayerTime();
+  const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
 
   const { toggleLike, isLiked } = useEngagement();
   const { toast } = useToast();
@@ -464,4 +454,4 @@ export function FullScreenPlayer({ isOpen, onClose }: FullScreenPlayerProps) {
       )}
     </AnimatePresence>
   );
-}
+});
