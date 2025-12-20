@@ -1,6 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.png';
@@ -15,30 +15,59 @@ const navItems = [
 
 export function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { engagementPoints, currentStreak } = useEngagement();
+
+  const handleBack = () => navigate(-1);
+  const handleForward = () => navigate(1);
 
   return (
     <header className="sticky top-0 z-40 glass-surface border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-            <motion.img
-              src={logo}
-              alt="SongChainn"
-              className="w-9 h-9 object-contain"
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-            />
-            <div className="hidden xs:block">
-              <span className="font-heading font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                SongChainn
-              </span>
-              <span className="hidden lg:inline text-xs text-primary ml-2 font-medium px-2 py-0.5 rounded-full bg-primary/10">
-                Audience
-              </span>
+          {/* Back/Forward + Logo */}
+          <div className="flex items-center gap-2">
+            {/* Navigation Controls */}
+            <div className="flex items-center gap-1">
+              <motion.button
+                onClick={handleBack}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-xl glass text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Go back"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </motion.button>
+              <motion.button
+                onClick={handleForward}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-xl glass text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Go forward"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </motion.button>
             </div>
-          </Link>
+
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group ml-2">
+              <motion.img
+                src={logo}
+                alt="SongChainn"
+                className="w-9 h-9 object-contain"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: 'spring', stiffness: 400 }}
+              />
+              <div className="hidden xs:block">
+                <span className="font-heading font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                  SongChainn
+                </span>
+                <span className="hidden lg:inline text-xs text-primary ml-2 font-medium px-2 py-0.5 rounded-full bg-primary/10">
+                  Audience
+                </span>
+              </div>
+            </Link>
+          </div>
 
           {/* Nav Links */}
           <nav className="hidden md:flex items-center gap-1">
