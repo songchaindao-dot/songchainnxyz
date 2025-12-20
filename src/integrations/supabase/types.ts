@@ -586,6 +586,30 @@ export type Database = {
           user_id: string | null
           view_count: number | null
         }
+        Insert: {
+          bio?: string | null
+          follower_count?: never
+          popularity_score?: never
+          post_count?: never
+          profile_id?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          total_post_likes?: never
+          user_id?: string | null
+          view_count?: never
+        }
+        Update: {
+          bio?: string | null
+          follower_count?: never
+          popularity_score?: never
+          post_count?: never
+          profile_id?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          total_post_likes?: never
+          user_id?: string | null
+          view_count?: never
+        }
         Relationships: []
       }
       song_popularity: {
