@@ -49,7 +49,7 @@ export const SONGS: Song[] = [
   {
     id: '1',
     title: "Eve's Daughter",
-    artist: '7ROO7H',
+    artist: '7ROO7H BASED',
     artistId: '1',
     audioUrl: "https://pub-dabb7edd1f1a4dbf82bbc290554e465b.r2.dev/7ROO7H%20BASED%20-%20EVE'S%20DAUGHTER.wav",
     coverImage: cover1,
@@ -128,8 +128,8 @@ export const SONGS: Song[] = [
 export const ARTISTS: Artist[] = [
   {
     id: '1',
-    name: '7ROO7H',
-    bio: 'A visionary artist from Zambia blending traditional African rhythms with contemporary electronic sounds. 7ROO7H creates music that speaks to the soul and moves the body.',
+    name: '7ROO7H BASED',
+    bio: 'A visionary artist from Zambia blending traditional African rhythms with contemporary electronic sounds. 7ROO7H BASED creates music that speaks to the soul and moves the body.',
     location: 'Zambia',
     townSquare: 'Livingstone Town Square',
     songs: ['1'],
