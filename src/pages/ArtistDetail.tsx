@@ -50,11 +50,19 @@ export default function ArtistDetail() {
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {/* Profile Image */}
             <div className="w-48 h-48 rounded-2xl bg-secondary overflow-hidden flex-shrink-0">
-              <div className="w-full h-full gradient-primary opacity-40 flex items-center justify-center">
-                <span className="text-6xl font-heading font-bold text-foreground">
-                  {artist.name.charAt(0)}
-                </span>
-              </div>
+              {artist.profileImage ? (
+                <img 
+                  src={artist.profileImage} 
+                  alt={artist.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full gradient-primary opacity-40 flex items-center justify-center">
+                  <span className="text-6xl font-heading font-bold text-foreground">
+                    {artist.name.charAt(0)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Info */}
