@@ -132,7 +132,123 @@ Issued At: ${issuedAt}`;
 }
 
 /**
+ * Try the new Base App wallet_connect method with SIWE capabilities
+ * This is the preferred method for the new Base App (2024/2025)
+ */
+async function tryWalletConnect(provider: BaseProvider, nonce: string): Promise<ConnectResult | null> {
+  try {
+    const result = await provider.request({
+      method: "wallet_connect",
+      params: [{
+        version: "1",
+        capabilities: {
+          signInWithEthereum: {
+            nonce,
+            chainId: BASE_CHAIN_ID
+          }
+        }
+      }]
+    });
+
+    // New Base App returns accounts array with capabilities
+    if (result?.accounts && result.accounts.length > 0) {
+      const account = result.accounts[0];
+      const address = account.address;
+      const siweResult = account.capabilities?.signInWithEthereum;
+      
+      if (siweResult?.message && siweResult?.signature) {
+        return {
+          success: true,
+          address,
+          message: siweResult.message,
+          signature: siweResult.signature,
+        };
+      }
+    }
+    
+    return null;
+  } catch (error: any) {
+    // wallet_connect not supported, return null to try legacy flow
+    console.log("wallet_connect not available, trying legacy flow");
+    return null;
+  }
+}
+
+/**
+ * Legacy connection flow using eth_requestAccounts + personal_sign
+ * Used for older Coinbase Wallet / Base Wallet versions
+ */
+async function tryLegacyConnect(provider: BaseProvider, nonce: string): Promise<ConnectResult> {
+  // Request accounts first (permission-gated in most wallets)
+  const accounts = await provider.request({
+    method: "eth_requestAccounts",
+    params: [],
+  });
+
+  if (!accounts || accounts.length === 0) {
+    return {
+      success: false,
+      error: "No accounts returned from wallet",
+    };
+  }
+
+  const address = accounts[0];
+
+  // Best-effort: switch to Base chain after permissions are granted
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: BASE_CHAIN_ID }],
+    });
+  } catch (switchError: any) {
+    // Chain not added, try to add it
+    if (switchError?.code === 4902) {
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: BASE_CHAIN_ID,
+            chainName: "Base",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://mainnet.base.org"],
+            blockExplorerUrls: ["https://basescan.org"],
+          },
+        ],
+      });
+    }
+    // Otherwise ignore: signing can still proceed in many wallet contexts.
+  }
+
+  // Create SIWE message with proper format
+  const message = createSIWEMessage(address, nonce);
+
+  // Sign the message
+  let signature: string;
+  try {
+    // Most widely supported
+    signature = await provider.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+  } catch (signError: any) {
+    // Fallback used by some providers
+    signature = await provider.request({
+      method: "eth_sign",
+      params: [address, message],
+    });
+  }
+
+  return {
+    success: true,
+    address,
+    message,
+    signature,
+  };
+}
+
+/**
  * Connect to Base App wallet with SIWE authentication
+ * Supports both new Base App (wallet_connect) and legacy Coinbase Wallet (personal_sign)
  */
 export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> {
   const provider = getBaseProvider();
@@ -145,71 +261,14 @@ export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> 
   }
 
   try {
-    // Request accounts first (permission-gated in most wallets)
-    const accounts = await provider.request({
-      method: "eth_requestAccounts",
-      params: [],
-    });
-
-    if (!accounts || accounts.length === 0) {
-      return {
-        success: false,
-        error: "No accounts returned from wallet",
-      };
+    // First, try the new Base App wallet_connect method
+    const walletConnectResult = await tryWalletConnect(provider, nonce);
+    if (walletConnectResult) {
+      return walletConnectResult;
     }
 
-    const address = accounts[0];
-
-    // Best-effort: switch to Base chain after permissions are granted
-    try {
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: BASE_CHAIN_ID }],
-      });
-    } catch (switchError: any) {
-      // Chain not added, try to add it
-      if (switchError?.code === 4902) {
-        await provider.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: BASE_CHAIN_ID,
-              chainName: "Base",
-              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-              rpcUrls: ["https://mainnet.base.org"],
-              blockExplorerUrls: ["https://basescan.org"],
-            },
-          ],
-        });
-      }
-      // Otherwise ignore: signing can still proceed in many wallet contexts.
-    }
-
-    // Create SIWE message with proper format
-    const message = createSIWEMessage(address, nonce);
-
-    // Sign the message
-    let signature: string;
-    try {
-      // Most widely supported
-      signature = await provider.request({
-        method: "personal_sign",
-        params: [message, address],
-      });
-    } catch (signError: any) {
-      // Fallback used by some providers
-      signature = await provider.request({
-        method: "eth_sign",
-        params: [address, message],
-      });
-    }
-
-    return {
-      success: true,
-      address,
-      message,
-      signature,
-    };
+    // Fall back to legacy flow for older wallets
+    return await tryLegacyConnect(provider, nonce);
   } catch (error: any) {
     // EIP-1193 user rejected request
     if (error?.code === 4001) {
