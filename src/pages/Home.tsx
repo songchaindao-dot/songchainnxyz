@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
@@ -8,6 +10,7 @@ import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
+import { usePlayerActions } from '@/context/PlayerContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -25,8 +28,23 @@ const itemVariants = {
 };
 
 export default function Home() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { playSong } = usePlayerActions();
   const featuredSongs = SONGS.slice(0, 3);
   const allSongs = SONGS;
+
+  // Handle deep link for shared songs
+  useEffect(() => {
+    const songId = searchParams.get('song');
+    if (songId) {
+      const song = SONGS.find(s => s.id === songId);
+      if (song) {
+        playSong(song);
+        // Clear the URL param after playing
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, playSong, setSearchParams]);
 
   return (
     <div className="min-h-screen bg-background pb-24 relative">
