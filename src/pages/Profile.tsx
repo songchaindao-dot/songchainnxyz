@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Navigation } from '@/components/Navigation';
 import { SONGS } from '@/data/musicData';
 import { InviteFriends } from '@/components/InviteFriends';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 // X (Twitter) and Base icons
 const XTwitterIcon = () => (
@@ -383,6 +384,14 @@ export default function Profile() {
             </Button>
           </div>
         </motion.div>
+
+        {/* Notification Settings */}
+        <div className="mb-8">
+          <h2 className="font-heading text-lg font-semibold text-foreground mb-4">
+            Settings
+          </h2>
+          <NotificationSettings />
+        </div>
 
         {/* Liked Songs Preview */}
         {likedSongsData.length > 0 && (

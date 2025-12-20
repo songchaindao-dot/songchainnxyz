@@ -8,7 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PostComment } from '@/types/social';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast';
+import { useCommentLikes } from '@/hooks/useCommentLikes';
+import { cn } from '@/lib/utils';
 
 interface CommentSheetProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface CommentSheetProps {
   isLoading: boolean;
   onAddComment: (content: string) => void;
   commentsCount: number;
+  onCommentsUpdate?: (comments: PostComment[]) => void;
 }
 
 interface ReplyingTo {
@@ -30,12 +32,29 @@ export function CommentSheet({
   comments, 
   isLoading, 
   onAddComment,
-  commentsCount 
+  commentsCount,
+  onCommentsUpdate
 }: CommentSheetProps) {
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
+  const [localComments, setLocalComments] = useState<PostComment[]>([]);
+  const [likingCommentId, setLikingCommentId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { fetchCommentLikesData, toggleCommentLike } = useCommentLikes();
+
+  // Fetch likes data when comments change
+  useEffect(() => {
+    const loadLikesData = async () => {
+      if (comments.length > 0) {
+        const enrichedComments = await fetchCommentLikesData(comments);
+        setLocalComments(enrichedComments);
+      } else {
+        setLocalComments([]);
+      }
+    };
+    loadLikesData();
+  }, [comments, fetchCommentLikesData]);
 
   // Focus input when replying
   useEffect(() => {
@@ -51,6 +70,30 @@ export function CommentSheet({
       setNewComment('');
     }
   }, [isOpen]);
+
+  const handleLikeComment = async (comment: PostComment) => {
+    if (likingCommentId) return;
+    
+    setLikingCommentId(comment.id);
+    
+    const result = await toggleCommentLike(
+      comment.id, 
+      comment.user_id, 
+      comment.is_liked || false
+    );
+    
+    if (result.success) {
+      const updatedComments = localComments.map(c => 
+        c.id === comment.id 
+          ? { ...c, likes_count: result.newLikesCount, is_liked: result.isLiked }
+          : c
+      );
+      setLocalComments(updatedComments);
+      onCommentsUpdate?.(updatedComments);
+    }
+    
+    setLikingCommentId(null);
+  };
 
   const handleReply = (userId: string, userName: string) => {
     setReplyingTo({ userId, userName });
@@ -81,7 +124,6 @@ export function CommentSheet({
     const parts = content.split(mentionRegex);
     
     return parts.map((part, index) => {
-      // Every odd index is a captured group (username)
       if (index % 2 === 1) {
         return (
           <button
@@ -89,8 +131,7 @@ export function CommentSheet({
             className="text-primary font-semibold hover:underline"
             onClick={(e) => {
               e.stopPropagation();
-              // Find user by name and navigate
-              const mentionedUser = comments.find(
+              const mentionedUser = localComments.find(
                 c => c.profile?.profile_name?.toLowerCase() === part.toLowerCase()
               );
               if (mentionedUser) {
@@ -146,14 +187,14 @@ export function CommentSheet({
                 <div className="flex items-center justify-center py-12">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : comments.length === 0 ? (
+              ) : localComments.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">No comments yet</p>
                   <p className="text-sm text-muted-foreground/70 mt-1">Be the first to comment!</p>
                 </div>
               ) : (
                 <div className="py-4 space-y-4">
-                  {comments.map((comment) => (
+                  {localComments.map((comment) => (
                     <motion.div
                       key={comment.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -182,7 +223,7 @@ export function CommentSheet({
                               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                             </span>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast({ title: 'More Options', description: 'Comment options coming soon.' })}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </div>
@@ -191,11 +232,20 @@ export function CommentSheet({
                         </p>
                         <div className="flex items-center gap-4 mt-2">
                           <button 
-                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => toast({ title: 'Liked!', description: 'Comment likes coming soon.' })}
+                            className={cn(
+                              "flex items-center gap-1 transition-colors",
+                              comment.is_liked 
+                                ? "text-red-500" 
+                                : "text-muted-foreground hover:text-red-500",
+                              likingCommentId === comment.id && "opacity-50"
+                            )}
+                            onClick={() => handleLikeComment(comment)}
+                            disabled={likingCommentId === comment.id}
                           >
-                            <Heart className="w-4 h-4" />
-                            <span className="text-xs">Like</span>
+                            <Heart className={cn("w-4 h-4", comment.is_liked && "fill-current")} />
+                            <span className="text-xs">
+                              {(comment.likes_count || 0) > 0 ? comment.likes_count : 'Like'}
+                            </span>
                           </button>
                           <button 
                             className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
