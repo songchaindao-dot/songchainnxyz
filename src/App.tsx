@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Profile from "./pages/Profile";
 import Social from "./pages/Social";
+import AudienceProfile from "./pages/AudienceProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ function AppContent() {
             <Route path="/education" element={<Education />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/social" element={<Social />} />
+            <Route path="/audience/:userId" element={<AudienceProfile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
