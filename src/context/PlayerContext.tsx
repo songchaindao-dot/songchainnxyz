@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
 import { immersiveEngine } from '@/audio/ImmersiveAudioEngine';
+import { supabase } from '@/integrations/supabase/client';
 
 // Split context for better performance - components only re-render for what they need
 interface PlayerStateContext {
@@ -158,6 +159,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         immersiveEngine.applyGenreProfile(song.genre);
       }
       immersiveEngine.resumeContext();
+      
+      // Track play event for popularity ranking
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.from('song_analytics').insert({
+          song_id: song.id,
+          user_id: user?.id || null,
+          event_type: 'play'
+        }).then(() => {});
+      });
       
       if (useCrossfade && isPlaying && currentSong) {
         crossfadeToSong(song);

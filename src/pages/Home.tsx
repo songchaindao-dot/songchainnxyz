@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Headphones } from 'lucide-react';
+import { Sparkles, Headphones, TrendingUp, Flame } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -10,8 +10,10 @@ import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
+import { TrendingProfiles } from '@/components/TrendingProfiles';
 import { usePlayerActions } from '@/context/PlayerContext';
 import { NotificationPromptBanner } from '@/components/NotificationPromptBanner';
+import { useTrendingSongs, useTrackSongEvent } from '@/hooks/usePopularityRanking';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -31,8 +33,12 @@ const itemVariants = {
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { playSong } = usePlayerActions();
-  const featuredSongs = SONGS.slice(0, 3);
-  const allSongs = SONGS;
+  const { data: trendingSongs } = useTrendingSongs(10);
+  const trackEvent = useTrackSongEvent();
+  
+  // Use trending songs if available, otherwise fall back to static data
+  const featuredSongs = trendingSongs?.slice(0, 3) || SONGS.slice(0, 3);
+  const allSongs = trendingSongs || SONGS;
 
   // Handle deep link for shared songs
   useEffect(() => {
@@ -141,17 +147,24 @@ export default function Home() {
             initial="hidden"
             animate="show"
           >
-            {/* Featured Songs */}
+            {/* Featured Songs - Top Trending */}
             <motion.section variants={itemVariants}>
+              <div className="flex items-center gap-2 mb-2">
+                <Flame className="w-5 h-5 text-primary" />
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">Trending Now</span>
+              </div>
               <FeaturedTracksSection songs={featuredSongs} />
             </motion.section>
 
-            {/* All Songs */}
+            {/* All Songs - Ranked by Popularity */}
             <motion.section variants={itemVariants}>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">All Songs</h2>
+              <div className="flex items-center gap-2 mb-6">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h2 className="font-heading text-2xl font-semibold text-foreground">Top Charts</h2>
+              </div>
               <div className="space-y-2">
                 {allSongs.map((song, index) => (
-                  <SongCard key={song.id} song={song} index={index} variant="compact" />
+                  <SongCard key={song.id} song={song} index={index} variant="compact" showRank />
                 ))}
               </div>
             </motion.section>
@@ -175,6 +188,9 @@ export default function Home() {
             transition={{ delay: 0.4 }}
           >
             <EngagementPanel />
+            
+            {/* Trending Profiles */}
+            <TrendingProfiles />
 
             {/* Phase Info */}
             <div className="glass-card rounded-3xl p-6 shine-overlay">

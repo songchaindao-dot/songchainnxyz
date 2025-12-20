@@ -13,10 +13,11 @@ interface SongCardProps {
   song: Song;
   index?: number;
   variant?: 'default' | 'compact' | 'featured';
+  showRank?: boolean;
 }
 
 // Memoized component to prevent unnecessary re-renders
-export const SongCard = memo(function SongCard({ song, index = 0, variant = 'default' }: SongCardProps) {
+export const SongCard = memo(function SongCard({ song, index = 0, variant = 'default', showRank = false }: SongCardProps) {
   const { currentSong, isPlaying } = usePlayerState();
   const { playSong, togglePlay } = usePlayerActions();
   const { toggleLike, isLiked } = useEngagement();
@@ -60,6 +61,18 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
         )}
         onClick={handlePlay}
       >
+        {/* Rank Badge */}
+        {showRank && (
+          <div className={cn(
+            "w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0",
+            index < 3 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-secondary text-muted-foreground"
+          )}>
+            {index + 1}
+          </div>
+        )}
+        
         <div className="relative w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden shadow-soft shine-overlay">
           {isCurrentSong ? (
             <SpinningSongArt isPlaying={isPlaying} size="lg" />
