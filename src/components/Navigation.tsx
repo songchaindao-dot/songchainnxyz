@@ -4,6 +4,8 @@ import { Home, Users, BookOpen, User, Flame, MessageCircle, ChevronLeft, Chevron
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.png';
+import { NotificationDropdown } from '@/components/NotificationDropdown';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 const navItems = [
   { path: '/', label: 'Discover', icon: Home },
@@ -17,6 +19,9 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { engagementPoints, currentStreak } = useEngagement();
+  
+  // Enable swipe gestures for mobile navigation
+  useSwipeNavigation();
 
   const handleBack = () => navigate(-1);
   const handleForward = () => navigate(1);
@@ -98,8 +103,9 @@ export function Navigation() {
             })}
           </nav>
 
-          {/* Engagement Stats */}
+          {/* Engagement Stats + Notifications */}
           <div className="flex items-center gap-3">
+            <NotificationDropdown />
             <div className="hidden sm:flex items-center gap-3">
               <motion.div
                 whileHover={{ scale: 1.05 }}
