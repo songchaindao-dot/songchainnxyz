@@ -127,8 +127,8 @@ class ImmersiveAudioEngine {
   private analysisCallbacks: Set<(analysis: AudioAnalysis) => void> = new Set();
   private animationFrameId: number | null = null;
   
-  // Connected audio elements
-  private connectedElements: Set<HTMLAudioElement> = new Set();
+  // Connected audio elements - Map to store source nodes
+  private connectedElements: Map<HTMLAudioElement, MediaElementAudioSourceNode> = new Map();
 
   constructor() {
     // Engine is created but not initialized until first audio
@@ -249,8 +249,6 @@ class ImmersiveAudioEngine {
   }
 
   connectAudioElement(audioElement: HTMLAudioElement): void {
-    if (this.connectedElements.has(audioElement)) return;
-    
     const ctx = this.createAudioContext();
     
     if (!this.analyserNode) {
@@ -262,13 +260,27 @@ class ImmersiveAudioEngine {
       ctx.resume();
     }
 
-    // Create source from audio element
-    try {
-      this.sourceNode = ctx.createMediaElementSource(audioElement);
-      this.connectedElements.add(audioElement);
-    } catch (e) {
-      // Element already connected - this is fine for crossfade scenarios
+    // Check if already connected
+    if (this.connectedElements.has(audioElement)) {
+      // Already connected, just ensure it's routed properly
       return;
+    }
+
+    // Create source from audio element
+    let sourceNode: MediaElementAudioSourceNode;
+    try {
+      sourceNode = ctx.createMediaElementSource(audioElement);
+      this.connectedElements.set(audioElement, sourceNode);
+    } catch (e) {
+      // Element already has a source - try to get it from our map
+      const existingSource = this.connectedElements.get(audioElement);
+      if (existingSource) {
+        sourceNode = existingSource;
+      } else {
+        // Can't recover - audio will play directly without processing
+        console.warn('Audio element already connected to different context');
+        return;
+      }
     }
 
     if (!this.bassFilter || !this.midFilter || !this.highFilter || 
@@ -276,12 +288,14 @@ class ImmersiveAudioEngine {
         !this.delayLeft || !this.delayRight || !this.harmonicDistortion ||
         !this.harmonicGain || !this.convolver || !this.gainNode || 
         !this.analyserNode) {
+      // If DSP chain not ready, connect directly to destination
+      sourceNode.connect(ctx.destination);
       return;
     }
 
     // Build DSP chain
     // Source -> EQ Chain
-    this.sourceNode.connect(this.bassFilter);
+    sourceNode.connect(this.bassFilter);
     this.bassFilter.connect(this.midFilter);
     this.midFilter.connect(this.highFilter);
     
