@@ -37,13 +37,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
   const [queue, setQueue] = useState<Song[]>(SONGS);
+  const [isCrossfading, setIsCrossfading] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
   const playNextRef = useRef<() => void>(() => {});
+  const crossfadeDuration = 2000; // 2 second crossfade
 
   useEffect(() => {
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
+    nextAudioRef.current = new Audio();
+    nextAudioRef.current.volume = 0;
 
     const audio = audioRef.current;
 
@@ -74,17 +79,69 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
       audio.pause();
+      nextAudioRef.current?.pause();
     };
   }, []);
 
-  const playSong = useCallback((song: Song) => {
+  // Crossfade transition function
+  const crossfadeToSong = useCallback((song: Song) => {
+    if (!audioRef.current || !nextAudioRef.current || isCrossfading) return;
+    
+    setIsCrossfading(true);
+    const currentAudio = audioRef.current;
+    const nextAudio = nextAudioRef.current;
+    
+    // Set up next track
+    nextAudio.src = song.audioUrl;
+    nextAudio.volume = 0;
+    nextAudio.play();
+    
+    // Update state immediately for UI
+    setCurrentSong(song);
+    
+    const steps = 20;
+    const stepDuration = crossfadeDuration / steps;
+    let step = 0;
+    
+    const fadeInterval = setInterval(() => {
+      step++;
+      const progress = step / steps;
+      
+      // Fade out current, fade in next
+      currentAudio.volume = Math.max(0, volume * (1 - progress));
+      nextAudio.volume = Math.min(volume, volume * progress);
+      
+      if (step >= steps) {
+        clearInterval(fadeInterval);
+        
+        // Swap audio elements
+        currentAudio.pause();
+        currentAudio.src = '';
+        
+        // Swap refs - the next audio becomes current
+        const temp = audioRef.current;
+        audioRef.current = nextAudioRef.current;
+        nextAudioRef.current = temp;
+        
+        setIsCrossfading(false);
+        setIsPlaying(true);
+      }
+    }, stepDuration);
+  }, [volume, isCrossfading, crossfadeDuration]);
+
+  const playSong = useCallback((song: Song, useCrossfade = false) => {
     if (audioRef.current) {
-      audioRef.current.src = song.audioUrl;
-      audioRef.current.play();
-      setCurrentSong(song);
-      setIsPlaying(true);
+      if (useCrossfade && isPlaying && currentSong) {
+        crossfadeToSong(song);
+      } else {
+        audioRef.current.src = song.audioUrl;
+        audioRef.current.volume = volume;
+        audioRef.current.play();
+        setCurrentSong(song);
+        setIsPlaying(true);
+      }
     }
-  }, []);
+  }, [crossfadeToSong, isPlaying, currentSong, volume]);
 
   const togglePlay = useCallback(() => {
     if (audioRef.current) {
@@ -126,25 +183,40 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Crossfade to next song for DJ-style transitions
   const playNext = useCallback(() => {
     if (currentSong && queue.length > 0) {
       const currentIndex = queue.findIndex(s => s.id === currentSong.id);
       const nextIndex = (currentIndex + 1) % queue.length;
-      playSong(queue[nextIndex]);
+      const nextSong = queue[nextIndex];
+      
+      // Use crossfade for automatic transitions
+      if (isPlaying) {
+        crossfadeToSong(nextSong);
+      } else {
+        playSong(nextSong, false);
+      }
     }
-  }, [currentSong, queue, playSong]);
+  }, [currentSong, queue, isPlaying, crossfadeToSong, playSong]);
 
   useEffect(() => {
     playNextRef.current = playNext;
   }, [playNext]);
 
+  // Crossfade to previous song
   const playPrevious = useCallback(() => {
     if (currentSong && queue.length > 0) {
       const currentIndex = queue.findIndex(s => s.id === currentSong.id);
       const prevIndex = currentIndex === 0 ? queue.length - 1 : currentIndex - 1;
-      playSong(queue[prevIndex]);
+      const prevSong = queue[prevIndex];
+      
+      if (isPlaying) {
+        crossfadeToSong(prevSong);
+      } else {
+        playSong(prevSong, false);
+      }
     }
-  }, [currentSong, queue, playSong]);
+  }, [currentSong, queue, isPlaying, crossfadeToSong, playSong]);
 
   const addToQueue = useCallback((song: Song) => {
     setQueue(prev => [...prev, song]);

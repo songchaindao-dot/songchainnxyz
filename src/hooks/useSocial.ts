@@ -5,6 +5,25 @@ import { useToast } from '@/hooks/use-toast';
 import { SocialPostWithProfile, PostComment } from '@/types/social';
 import { AudienceProfile } from '@/types/database';
 
+// Helper to create notifications
+const createNotificationRecord = async (
+  fromUserId: string,
+  toUserId: string,
+  type: 'follow' | 'like' | 'comment' | 'mention',
+  postId?: string,
+  message?: string
+) => {
+  if (fromUserId === toUserId) return; // Don't notify yourself
+  
+  await supabase.from('notifications').insert({
+    user_id: toUserId,
+    type,
+    from_user_id: fromUserId,
+    post_id: postId || null,
+    message: message || null,
+  });
+};
+
 export function useSocial() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -184,6 +203,11 @@ export function useSocial() {
       await supabase
         .from('post_likes')
         .insert({ post_id: postId, user_id: user.id });
+      
+      // Create notification for the post owner
+      if (post.user_id !== user.id) {
+        createNotificationRecord(user.id, post.user_id, 'like', postId);
+      }
     }
 
     setPosts(prev => prev.map(p => 
@@ -200,9 +224,9 @@ export function useSocial() {
   const followUser = useCallback(async (userId: string) => {
     if (!user || userId === user.id) return;
 
-    const isFollowing = following.includes(userId);
+    const isCurrentlyFollowing = following.includes(userId);
 
-    if (isFollowing) {
+    if (isCurrentlyFollowing) {
       await supabase
         .from('user_follows')
         .delete()
@@ -216,6 +240,9 @@ export function useSocial() {
         .insert({ follower_id: user.id, following_id: userId });
       setFollowing(prev => [...prev, userId]);
       toast({ title: 'Following!' });
+      
+      // Create notification for the followed user
+      createNotificationRecord(user.id, userId, 'follow');
     }
   }, [user, following, toast]);
 
@@ -260,12 +287,18 @@ export function useSocial() {
       return;
     }
 
+    // Get the post owner to send notification
+    const post = posts.find(p => p.id === postId);
+    if (post && post.user_id !== user.id) {
+      createNotificationRecord(user.id, post.user_id, 'comment', postId, content.substring(0, 100));
+    }
+
     setPosts(prev => prev.map(p => 
       p.id === postId 
         ? { ...p, comments_count: p.comments_count + 1 } 
         : p
     ));
-  }, [user, toast]);
+  }, [user, toast, posts]);
 
   return {
     posts,

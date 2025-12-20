@@ -98,6 +98,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          is_read: boolean
+          message: string | null
+          post_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          post_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          post_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_collaborators: {
         Row: {
           can_edit: boolean
