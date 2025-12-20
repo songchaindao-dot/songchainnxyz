@@ -93,7 +93,7 @@ serve(async (req) => {
       // Validate SIWE message - check for standard SIWE patterns or the address in the message
       // Base wallet may return different formats depending on the connection method
       const hasSIWEFormat = message.includes("wants you to sign in with your Ethereum account") ||
-                            message.includes("Sign in to SongChainn") ||
+                            message.includes("Sign in to $ongChainn") ||
                             message.toLowerCase().includes(address.toLowerCase());
       
       if (!hasSIWEFormat) {

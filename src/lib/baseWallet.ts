@@ -122,7 +122,7 @@ export function createSIWEMessage(
   return `${domain} wants you to sign in with your Ethereum account:
 ${address}
 
-Sign in to SongChainn with your Base wallet.
+Sign in to $ongChainn with your Base wallet.
 
 URI: ${uri}
 Version: 1

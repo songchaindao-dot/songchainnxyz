@@ -8,6 +8,8 @@ import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
+import { NotificationBanner } from '@/components/NotificationBanner';
+import { DownloadAppBanner } from '@/components/DownloadAppBanner';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -32,6 +34,8 @@ export default function Home() {
     <div className="min-h-screen bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
       <Navigation />
+      <NotificationBanner />
+      <DownloadAppBanner />
 
       <main className="container mx-auto px-4 py-8 relative z-10">
         {/* Hero Section */}

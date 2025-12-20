@@ -1,6 +1,6 @@
 {
-  "name": "SongChainn",
-  "short_name": "SongChainn",
+  "name": "$ongChainn",
+  "short_name": "$ongChainn",
   "description": "Audience-first music streaming on Base & Farcaster",
   "start_url": "/",
   "display": "standalone",
