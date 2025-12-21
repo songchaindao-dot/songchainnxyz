@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Smartphone, Share } from 'lucide-react';
+import { Download, X, Smartphone, Share, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -24,10 +24,13 @@ if (typeof window !== 'undefined') {
   });
 }
 
+type InstallState = 'idle' | 'prompting' | 'installing' | 'complete' | 'error';
+
 export function DownloadAppBanner() {
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
+  const [installState, setInstallState] = useState<InstallState>('idle');
+  const [installProgress, setInstallProgress] = useState(0);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -55,8 +58,36 @@ export function DownloadAppBanner() {
     }
   }, []);
 
+  // Simulate installation progress
+  useEffect(() => {
+    if (installState === 'installing') {
+      const interval = setInterval(() => {
+        setInstallProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setInstallState('complete');
+            return 100;
+          }
+          return prev + Math.random() * 15 + 5;
+        });
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, [installState]);
+
+  // Auto-hide after complete
+  useEffect(() => {
+    if (installState === 'complete') {
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [installState]);
+
   const handleInstall = useCallback(async () => {
-    setIsInstalling(true);
+    setInstallState('prompting');
 
     try {
       // Check if we have a deferred prompt (Chrome/Android/Edge)
@@ -68,20 +99,24 @@ export function DownloadAppBanner() {
         console.log('User choice:', outcome);
         
         if (outcome === 'accepted') {
+          setInstallState('installing');
+          setInstallProgress(0);
           toast.success('Installing $ongChainn...', {
             description: 'The app will appear on your home screen shortly!'
           });
-          setIsVisible(false);
-          localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
+        } else {
+          setInstallState('idle');
         }
         
         // Clear the prompt - it can only be used once
         deferredInstallPrompt = null;
       } else if (isIOS) {
         // For iOS, show the instructions overlay
+        setInstallState('idle');
         setShowIOSInstructions(true);
       } else {
         // For browsers that don't support beforeinstallprompt
+        setInstallState('idle');
         toast.info('Add to Home Screen', {
           description: 'Use your browser menu to "Add to Home Screen" or "Install App"',
           duration: 5000
@@ -89,17 +124,52 @@ export function DownloadAppBanner() {
       }
     } catch (error) {
       console.error('Install error:', error);
+      setInstallState('error');
       toast.error('Installation failed', {
         description: 'Please try using your browser menu to install the app'
       });
-    } finally {
-      setIsInstalling(false);
+      setTimeout(() => setInstallState('idle'), 2000);
     }
   }, [isIOS]);
 
   const handleDismiss = () => {
     localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
     setIsVisible(false);
+  };
+
+  const getButtonContent = () => {
+    switch (installState) {
+      case 'prompting':
+        return (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Waiting...
+          </>
+        );
+      case 'installing':
+        return (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Installing...
+          </>
+        );
+      case 'complete':
+        return (
+          <>
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Installed!
+          </>
+        );
+      case 'error':
+        return 'Try Again';
+      default:
+        return (
+          <>
+            <Download className="w-3.5 h-3.5" />
+            Install App
+          </>
+        );
+    }
   };
 
   if (isInstalled) return null;
@@ -114,47 +184,134 @@ export function DownloadAppBanner() {
             exit={{ opacity: 0, y: 100 }}
             className="fixed bottom-24 left-4 right-4 z-50 mx-auto max-w-md"
           >
-            <div className="glass-card rounded-2xl p-4 border border-border shadow-lg">
+            <div className="glass-card rounded-2xl p-4 border border-border shadow-lg overflow-hidden relative">
+              {/* Progress Bar */}
+              {(installState === 'installing' || installState === 'complete') && (
+                <motion.div 
+                  className="absolute top-0 left-0 right-0 h-1 bg-secondary"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <motion.div 
+                    className="h-full gradient-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(installProgress, 100)}%` }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </motion.div>
+              )}
+              
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 shadow-glow">
-                  <Smartphone className="w-6 h-6 text-primary-foreground" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                  installState === 'complete' 
+                    ? 'bg-green-500/20 shadow-[0_0_20px_hsl(142,76%,36%,0.3)]' 
+                    : 'gradient-primary shadow-glow'
+                }`}>
+                  <AnimatePresence mode="wait">
+                    {installState === 'complete' ? (
+                      <motion.div
+                        key="check"
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                      >
+                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                      </motion.div>
+                    ) : installState === 'installing' ? (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Loader2 className="w-6 h-6 text-primary-foreground animate-spin" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="phone"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <Smartphone className="w-6 h-6 text-primary-foreground" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-heading font-semibold text-foreground text-sm mb-1">
-                    Get the $ongChainn App
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Install for faster access, offline music, and push notifications.
-                  </p>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={handleInstall}
-                      disabled={isInstalling}
-                      className="gradient-primary text-xs h-8 gap-1.5"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      {isInstalling ? 'Installing...' : 'Install App'}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={handleDismiss}
-                      className="text-xs h-8 text-muted-foreground"
-                    >
-                      Not Now
-                    </Button>
-                  </div>
+                  <AnimatePresence mode="wait">
+                    {installState === 'complete' ? (
+                      <motion.div
+                        key="complete"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <h3 className="font-heading font-semibold text-green-500 text-sm mb-1">
+                          Successfully Installed!
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          $ongChainn is now on your home screen
+                        </p>
+                      </motion.div>
+                    ) : installState === 'installing' ? (
+                      <motion.div
+                        key="installing"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <h3 className="font-heading font-semibold text-foreground text-sm mb-1">
+                          Installing $ongChainn...
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(Math.min(installProgress, 100))}% complete
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="default"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <h3 className="font-heading font-semibold text-foreground text-sm mb-1">
+                          Get the $ongChainn App
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Install for faster access, offline music, and push notifications.
+                        </p>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={handleInstall}
+                            disabled={installState !== 'idle'}
+                            className="gradient-primary text-xs h-8 gap-1.5"
+                          >
+                            {getButtonContent()}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={handleDismiss}
+                            className="text-xs h-8 text-muted-foreground"
+                          >
+                            Not Now
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 
-                <button
-                  onClick={handleDismiss}
-                  className="p-1 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {installState !== 'installing' && installState !== 'complete' && (
+                  <button
+                    onClick={handleDismiss}
+                    className="p-1 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
