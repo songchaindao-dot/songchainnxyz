@@ -13,6 +13,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Discover = lazy(() => import("./pages/Discover"));
 const Artists = lazy(() => import("./pages/Artists"));
 const ArtistDetail = lazy(() => import("./pages/ArtistDetail"));
+const SongDetail = lazy(() => import("./pages/SongDetail"));
 const Education = lazy(() => import("./pages/Education"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -77,7 +78,7 @@ function AppContent() {
               <Route path="/discover" element={<Discover />} />
               <Route path="/artists" element={<Artists />} />
               <Route path="/artist/:id" element={<ArtistDetail />} />
-              <Route path="/education" element={<Education />} />
+              <Route path="/song/:id" element={<SongDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/social" element={<Social />} />
               <Route path="/community" element={<Community />} />

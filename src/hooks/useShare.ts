@@ -14,7 +14,7 @@ export function useShare() {
     const baseUrl = window.location.origin;
     switch (type) {
       case 'song':
-        return `${baseUrl}/?song=${id}`;
+        return `${baseUrl}/song/${id}`;
       case 'post':
         return `${baseUrl}/social?post=${id}`;
       case 'artist':
