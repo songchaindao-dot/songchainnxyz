@@ -50,32 +50,32 @@ export const FeaturedTracksSection = memo(function FeaturedTracksSection({ songs
       </div>
 
       {/* Header with enhanced styling */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Simplified icon container */}
           <div className="relative">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 blur-lg opacity-50" />
-            <div className="relative p-3 rounded-2xl bg-gradient-to-br from-primary to-cyan-400 shadow-glow">
-              <TrendingUp className="w-6 h-6 text-primary-foreground" />
+            <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-cyan-400 blur-lg opacity-50" />
+            <div className="relative p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-cyan-400 shadow-glow">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
+              <h2 className="font-heading text-lg sm:text-2xl md:text-3xl font-bold text-foreground">
                 Featured Tracks
               </h2>
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mt-1">Trending in Livingstone Town Square</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Trending in Livingstone Town Square</p>
           </div>
         </div>
 
-        {/* Live indicator */}
+        {/* Live indicator - hidden on small mobile */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-full glass"
+          className="hidden sm:flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass"
         >
           <motion.div
             className="w-2 h-2 rounded-full bg-green-400"
@@ -89,15 +89,15 @@ export const FeaturedTracksSection = memo(function FeaturedTracksSection({ songs
 
       {/* Featured cards container */}
       <div className="relative">
-        {/* Decorative elements */}
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-primary/20">
+        {/* Decorative elements - hidden on mobile */}
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full glass border border-primary/20">
           <Zap className="w-3 h-3 text-primary" />
           <span className="text-xs text-primary font-medium">Hot This Week</span>
           <Zap className="w-3 h-3 text-primary" />
         </div>
 
-        {/* Cards grid */}
-        <div className="grid md:grid-cols-3 gap-6 pt-4">
+        {/* Cards grid - single column on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 pt-0 sm:pt-4">
           {songs.map((song, index) => (
             <motion.div
               key={song.id}
@@ -115,9 +115,9 @@ export const FeaturedTracksSection = memo(function FeaturedTracksSection({ songs
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 to-cyan-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
               
               {/* Rank badge */}
-              <div className="absolute -top-3 -left-3 z-20">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-glow-intense">
-                  <span className="text-xs font-bold text-primary-foreground">#{index + 1}</span>
+              <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 z-20">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-glow-intense">
+                  <span className="text-[10px] sm:text-xs font-bold text-primary-foreground">#{index + 1}</span>
                 </div>
               </div>
 
@@ -127,7 +127,7 @@ export const FeaturedTracksSection = memo(function FeaturedTracksSection({ songs
         </div>
 
         {/* Bottom decorative line */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-primary/30 to-transparent hidden sm:block" />
       </div>
 
       {/* Simplified floating music notes */}

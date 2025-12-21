@@ -63,17 +63,17 @@ export default function Home() {
       <NotificationBanner />
       <DownloadAppBanner />
 
-      <main className="container mx-auto px-4 py-8 relative z-10">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 relative z-10">
         {/* Hero Section */}
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="mb-12"
+          className="mb-6 sm:mb-12"
         >
-          <div className="relative overflow-hidden rounded-3xl glass-card p-8 md:p-12 shine-overlay">
-            {/* Animated gradient orb */}
-            <div className="absolute top-0 right-0 w-[400px] h-[400px] opacity-30">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glass-card p-4 sm:p-8 md:p-12 shine-overlay">
+            {/* Animated gradient orb - smaller on mobile */}
+            <div className="absolute top-0 right-0 w-[200px] sm:w-[400px] h-[200px] sm:h-[400px] opacity-30">
               <motion.div
                 className="absolute inset-0 rounded-full"
                 style={{
@@ -94,9 +94,9 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs font-medium text-primary mb-4"
+                className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full glass text-xs font-medium text-primary mb-3 sm:mb-4"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>Audience Edition</span>
               </motion.div>
 
@@ -104,7 +104,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight"
+                className="font-heading text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 leading-tight"
               >
                 Discover Curated Music from{' '}
                 <span className="text-gradient">Livingstone Town Square</span>
@@ -114,7 +114,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-base md:text-lg text-muted-foreground max-w-2xl mb-6 leading-relaxed"
+                className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mb-4 sm:mb-6 leading-relaxed"
               >
                 Stream original music from artists in the Create On Base pioneer chapter.
                 Your listening activity builds culture and unlocks future ownership.
@@ -124,16 +124,16 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="flex flex-wrap items-center gap-4"
+                className="flex flex-wrap items-center gap-2 sm:gap-4"
               >
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm">
-                  <Headphones className="w-4 h-4 text-primary" />
+                <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl glass text-xs sm:text-sm">
+                  <Headphones className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                   <span className="text-foreground font-medium">{ARTISTS.length} Artists</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm">
+                <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl glass text-xs sm:text-sm">
                   <span className="text-foreground font-medium">{SONGS.length} Songs</span>
                 </div>
-                <div className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium">
+                <div className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-primary/10 text-primary text-xs sm:text-sm font-medium">
                   Zambia
                 </div>
               </motion.div>
@@ -141,10 +141,10 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Main Content */}
           <motion.div
-            className="lg:col-span-2 space-y-12"
+            className="lg:col-span-2 space-y-6 sm:space-y-12"
             variants={containerVariants}
             initial="hidden"
             animate="show"
@@ -156,8 +156,8 @@ export default function Home() {
 
             {/* All Songs */}
             <motion.section variants={itemVariants}>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">All Songs</h2>
-              <div className="space-y-2">
+              <h2 className="font-heading text-xl sm:text-2xl font-semibold text-foreground mb-4 sm:mb-6">All Songs</h2>
+              <div className="space-y-1 sm:space-y-2">
                 {allSongs.map((song, index) => (
                   <SongCard key={song.id} song={song} index={index} variant="compact" />
                 ))}
@@ -166,8 +166,8 @@ export default function Home() {
 
             {/* Artists Preview - Ranked by popularity */}
             <motion.section variants={itemVariants}>
-              <h2 className="font-heading text-2xl font-semibold text-foreground mb-6">Top Artists</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <h2 className="font-heading text-xl sm:text-2xl font-semibold text-foreground mb-4 sm:mb-6">Top Artists</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {rankedArtists.slice(0, 4).map((artist, index) => (
                   <ArtistCard key={artist.id} artist={artist} index={index} />
                 ))}
@@ -177,7 +177,7 @@ export default function Home() {
 
           {/* Sidebar */}
           <motion.aside
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
@@ -185,27 +185,27 @@ export default function Home() {
             <EngagementPanel />
 
             {/* Phase Info */}
-            <div className="glass-card rounded-3xl p-6 shine-overlay">
-              <h3 className="font-heading font-semibold text-foreground mb-4">Phase One</h3>
-              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+            <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 shine-overlay">
+              <h3 className="font-heading font-semibold text-foreground mb-3 sm:mb-4 text-sm sm:text-base">Phase One</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-5 leading-relaxed">
                 You're part of the early audience building listening culture.
                 Ownership, minting, and rewards activate in later phases.
               </p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full gradient-primary shadow-glow" />
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full gradient-primary shadow-glow" />
                   <span className="text-foreground">Music Discovery</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full gradient-primary shadow-glow" />
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full gradient-primary shadow-glow" />
                   <span className="text-foreground">Community Participation</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted" />
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted" />
                   <span className="text-muted-foreground">Ownership (Coming Soon)</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted" />
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted" />
                   <span className="text-muted-foreground">Rewards (Coming Soon)</span>
                 </div>
               </div>

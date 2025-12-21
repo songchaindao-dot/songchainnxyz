@@ -136,52 +136,52 @@ export const AudioPlayer = memo(function AudioPlayer() {
         <div className="glass-surface border-t border-border/50">
           <ProgressBar currentTime={currentTime} duration={duration} onSeek={seekTo} />
 
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between gap-4">
+          <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
               {/* Song info - clickable to expand */}
               <button
                 onClick={handleOpenFullScreen}
-                className="flex items-center gap-3 min-w-0 flex-1 text-left group"
+                className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 text-left group"
               >
                 <div className="relative flex-shrink-0">
                   <SpinningSongArt isPlaying={isPlaying} size="md" className="shadow-soft" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                  <p className="font-medium text-foreground truncate text-sm sm:text-base group-hover:text-primary transition-colors">
                     {currentSong.title}
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">{currentSong.artist}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{currentSong.artist}</p>
                 </div>
-                <ChevronUp className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
+                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 hidden xs:block" />
               </button>
 
               {/* Controls */}
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-0.5 sm:gap-2">
                 <button
                   onClick={playPrevious}
-                  className="p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect hidden sm:flex"
+                  className="p-1.5 sm:p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect hidden sm:flex"
                 >
-                  <SkipBack className="w-5 h-5 text-foreground" />
+                  <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </button>
 
                 <motion.button
                   onClick={togglePlay}
-                  className="p-3 gradient-primary rounded-full shadow-glow press-effect"
+                  className="p-2.5 sm:p-3 gradient-primary rounded-full shadow-glow press-effect"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   {isPlaying ? (
-                    <Pause className="w-5 h-5 text-primary-foreground" />
+                    <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
                   ) : (
-                    <Play className="w-5 h-5 text-primary-foreground ml-0.5" />
+                    <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground ml-0.5" />
                   )}
                 </motion.button>
 
                 <button
                   onClick={playNext}
-                  className="p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect"
+                  className="p-1.5 sm:p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect"
                 >
-                  <SkipForward className="w-5 h-5 text-foreground" />
+                  <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </button>
               </div>
 

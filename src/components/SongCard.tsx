@@ -44,14 +44,14 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
         transition={{ delay: index * 0.05, ease: [0.4, 0, 0.2, 1] }}
         whileHover={{ scale: 1.01, x: 4 }}
         className={cn(
-          "group flex items-center gap-4 p-3 rounded-2xl transition-all cursor-pointer",
+          "group flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-all cursor-pointer",
           isCurrentSong
             ? "glass-card border-primary/30"
             : "hover:bg-secondary/30"
         )}
         onClick={handlePlay}
       >
-        <div className="relative w-14 h-14 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden shadow-soft shine-overlay">
+        <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden shadow-soft shine-overlay">
           {isCurrentSong ? (
             <SpinningSongArt isPlaying={isPlaying} size="lg" />
           ) : (
@@ -71,7 +71,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                 whileHover={{ opacity: 1 }}
                 className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm"
               >
-                <Play className="w-5 h-5 text-foreground ml-0.5" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 text-foreground ml-0.5" />
               </motion.div>
             </>
           )}
@@ -79,16 +79,16 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
 
         <div className="flex-1 min-w-0">
           <p className={cn(
-            "font-medium truncate text-base",
+            "font-medium truncate text-sm sm:text-base",
             isCurrentSong ? "text-primary" : "text-foreground"
           )}>
             {song.title}
           </p>
-          <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">{song.artist}</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">
+        <div className="flex items-center gap-1 sm:gap-3">
+          <span className="text-[10px] sm:text-xs text-muted-foreground tabular-nums hidden xs:block">
             {song.plays.toLocaleString()} plays
           </span>
           <motion.button
@@ -96,11 +96,11 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
             whileTap={{ scale: 0.9 }}
             onClick={handleLike}
             className={cn(
-              "p-2 rounded-full transition-all",
+              "p-1.5 sm:p-2 rounded-full transition-all",
               liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             )}
           >
-            <Heart className={cn("w-4 h-4", liked && "fill-current")} />
+            <Heart className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", liked && "fill-current")} />
           </motion.button>
         </div>
       </motion.div>
