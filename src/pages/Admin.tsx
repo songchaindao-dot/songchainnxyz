@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Music, Users, Upload, Edit, Trash2, Plus, Save, LogOut } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { useSongPopularity } from '@/hooks/usePopularity';
 import logo from '@/assets/songchainn-logo.webp';
 
 // Simulated admin authentication
@@ -15,13 +16,25 @@ const ADMIN_PASSWORD = 'songchainn-admin-2024';
 
 export default function Admin() {
   const { isAdmin } = useAuth();
+  const { data: popularityData } = useSongPopularity();
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<'artists' | 'songs'>('artists');
   const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
   const [artists, setArtists] = useState(ARTISTS);
-  const [localSongs, setLocalSongs] = useState(SONGS);
+  
+  // Merge songs with real database stats
+  const songsWithRealStats = useMemo(() => {
+    return SONGS.map(song => {
+      const dbData = popularityData?.find(p => p.song_id === song.id);
+      return {
+        ...song,
+        plays: dbData?.play_count || 0,
+        likes: dbData?.like_count || 0,
+      };
+    });
+  }, [popularityData]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +153,7 @@ export default function Admin() {
               }`}
             >
               <Music className="w-4 h-4 inline mr-2" />
-              Songs ({localSongs.length})
+              Songs ({songsWithRealStats.length})
             </button>
           </div>
 
@@ -227,7 +240,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {localSongs.map((song) => (
+                    {songsWithRealStats.map((song) => (
                       <tr key={song.id} className="hover:bg-secondary/20">
                         <td className="px-4 py-3 font-medium text-foreground">{song.title}</td>
                         <td className="px-4 py-3 text-muted-foreground">{song.artist}</td>
