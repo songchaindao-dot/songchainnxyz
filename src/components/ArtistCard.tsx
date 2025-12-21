@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Music } from 'lucide-react';
 import { Artist, SONGS } from '@/data/musicData';
 import { Link } from 'react-router-dom';
+import { useSongPopularity } from '@/hooks/usePopularity';
 
 interface ArtistCardProps {
   artist: Artist;
@@ -10,12 +11,18 @@ interface ArtistCardProps {
 }
 
 export const ArtistCard = memo(function ArtistCard({ artist, index = 0 }: ArtistCardProps) {
-  // Memoize expensive calculations
+  const { data: popularityData } = useSongPopularity();
+  
+  // Calculate real stats from database
   const { artistSongs, totalPlays } = useMemo(() => {
     const songs = SONGS.filter(s => s.artistId === artist.id);
-    const plays = songs.reduce((sum, s) => sum + s.plays, 0);
+    let plays = 0;
+    songs.forEach(song => {
+      const songData = popularityData?.find(p => p.song_id === song.id);
+      plays += songData?.play_count || 0;
+    });
     return { artistSongs: songs, totalPlays: plays };
-  }, [artist.id]);
+  }, [artist.id, popularityData]);
 
   return (
     <Link to={`/artist/${artist.id}`}>
