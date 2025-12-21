@@ -19,6 +19,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Social = lazy(() => import("./pages/Social"));
+const Community = lazy(() => import("./pages/Community"));
 const AudienceProfile = lazy(() => import("./pages/AudienceProfile"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -79,6 +80,7 @@ function AppContent() {
               <Route path="/education" element={<Education />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/social" element={<Social />} />
+              <Route path="/community" element={<Community />} />
               <Route path="/audience/:userId" element={<AudienceProfile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="*" element={<NotFound />} />
