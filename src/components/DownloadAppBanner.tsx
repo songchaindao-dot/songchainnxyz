@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, Share, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 const BANNER_DISMISSED_KEY = 'download-app-banner-dismissed';
 
@@ -75,7 +76,7 @@ export function DownloadAppBanner() {
     }
   }, [installState]);
 
-  // Auto-hide after complete + haptic feedback
+  // Auto-hide after complete + haptic feedback + confetti
   useEffect(() => {
     if (installState === 'complete') {
       // Trigger haptic feedback on supported devices
@@ -83,6 +84,32 @@ export function DownloadAppBanner() {
         // Success pattern: short-pause-long vibration
         navigator.vibrate([50, 50, 100]);
       }
+      
+      // Trigger confetti celebration
+      const duration = 2000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.8 },
+          colors: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#7C3AED', '#6D28D9']
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.8 },
+          colors: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#7C3AED', '#6D28D9']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
       
       const timer = setTimeout(() => {
         setIsVisible(false);
