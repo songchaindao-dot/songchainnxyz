@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { PlayerProvider } from "@/context/PlayerContext";
 import { EngagementProvider } from "@/context/EngagementContext";
+import { OfflineQueueProvider } from "@/hooks/useOfflineQueue";
 
 // Lazy load pages for better initial load performance
 const Home = lazy(() => import("./pages/Home"));
@@ -69,27 +70,29 @@ function AppContent() {
   }
 
   return (
-    <PlayerProvider>
-      <EngagementProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/artists" element={<Artists />} />
-              <Route path="/artist/:id" element={<ArtistDetail />} />
-              <Route path="/song/:id" element={<SongDetail />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/social" element={<Social />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/audience/:userId" element={<AudienceProfile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </EngagementProvider>
-    </PlayerProvider>
+    <OfflineQueueProvider>
+      <PlayerProvider>
+        <EngagementProvider>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/discover" element={<Discover />} />
+                <Route path="/artists" element={<Artists />} />
+                <Route path="/artist/:id" element={<ArtistDetail />} />
+                <Route path="/song/:id" element={<SongDetail />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/social" element={<Social />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/audience/:userId" element={<AudienceProfile />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </EngagementProvider>
+      </PlayerProvider>
+    </OfflineQueueProvider>
   );
 }
 
