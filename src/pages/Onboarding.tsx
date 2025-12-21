@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Headphones, Camera, User, FileText, Link2, Loader2, Upload } from 'lucide-react';
+import { Headphones, Camera, User, FileText, Link2, Loader2, Upload, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,14 +9,26 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/songchainn-logo.webp';
+import { z } from 'zod';
+
+// Validation schema
+const profileSchema = z.object({
+  profileName: z.string().trim().min(1, 'Profile name is required').max(50, 'Profile name must be less than 50 characters'),
+  bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
+  location: z.string().trim().min(1, 'Location is required').max(100, 'Location must be less than 100 characters'),
+  xProfileLink: z.string().url('Invalid URL').optional().or(z.literal('')),
+  baseProfileLink: z.string().max(200, 'Link too long').optional(),
+});
 
 export default function Onboarding() {
   const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [profileName, setProfileName] = useState('');
   const [bio, setBio] = useState('');
+  const [location, setLocation] = useState('');
   const [xProfileLink, setXProfileLink] = useState('');
   const [baseProfileLink, setBaseProfileLink] = useState('');
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
@@ -67,9 +79,26 @@ export default function Onboarding() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    if (!profileName.trim()) {
-      toast({ title: 'Please enter a profile name', variant: 'destructive' });
+    // Validate with zod
+    const validationResult = profileSchema.safeParse({
+      profileName,
+      bio: bio || undefined,
+      location,
+      xProfileLink: xProfileLink || undefined,
+      baseProfileLink: baseProfileLink || undefined,
+    });
+
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string> = {};
+      validationResult.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      toast({ title: 'Please fix the errors below', variant: 'destructive' });
       return;
     }
     
@@ -95,6 +124,7 @@ export default function Onboarding() {
           user_id: user.id,
           profile_name: profileName.trim(),
           bio: bio.trim() || null,
+          location: location.trim(),
           profile_picture_url: profilePictureUrl,
           cover_photo_url: coverPhotoUrl,
           x_profile_link: xProfileLink.trim() || null,
@@ -233,7 +263,33 @@ export default function Onboarding() {
               onChange={(e) => setProfileName(e.target.value)}
               placeholder="Your display name"
               maxLength={50}
+              className={errors.profileName ? 'border-destructive' : ''}
             />
+            {errors.profileName && (
+              <p className="text-xs text-destructive">{errors.profileName}</p>
+            )}
+          </div>
+
+          {/* Location */}
+          <div className="space-y-2">
+            <Label htmlFor="location" className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Where are you listening from? <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Lusaka, Zambia"
+              maxLength={100}
+              className={errors.location ? 'border-destructive' : ''}
+            />
+            {errors.location && (
+              <p className="text-xs text-destructive">{errors.location}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Share your city or country to connect with nearby listeners
+            </p>
           </div>
 
           {/* Bio */}
