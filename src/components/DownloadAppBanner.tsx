@@ -75,9 +75,15 @@ export function DownloadAppBanner() {
     }
   }, [installState]);
 
-  // Auto-hide after complete
+  // Auto-hide after complete + haptic feedback
   useEffect(() => {
     if (installState === 'complete') {
+      // Trigger haptic feedback on supported devices
+      if ('vibrate' in navigator) {
+        // Success pattern: short-pause-long vibration
+        navigator.vibrate([50, 50, 100]);
+      }
+      
       const timer = setTimeout(() => {
         setIsVisible(false);
         localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
