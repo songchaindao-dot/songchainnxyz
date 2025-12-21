@@ -80,7 +80,7 @@ export const SONGS: Song[] = [
     plays: 892,
     likes: 256,
     townSquare: 'Livingstone Town Square',
-    genre: 'Dancehall',
+    genre: 'Kali-Funk',
   },
   {
     id: '3',
@@ -92,7 +92,7 @@ export const SONGS: Song[] = [
     plays: 2103,
     likes: 567,
     townSquare: 'Livingstone Town Square',
-    genre: 'Afro',
+    genre: 'Trap',
   },
   {
     id: '4',
@@ -116,7 +116,7 @@ export const SONGS: Song[] = [
     plays: 1534,
     likes: 423,
     townSquare: 'Livingstone Town Square',
-    genre: 'Trap',
+    genre: 'Kali-Funk',
   },
   {
     id: '6',
@@ -128,7 +128,7 @@ export const SONGS: Song[] = [
     plays: 1089,
     likes: 312,
     townSquare: 'Livingstone Town Square',
-    genre: 'Kali-Funk',
+    genre: 'ZamRock-Fusion',
   },
   {
     id: '7',
@@ -140,7 +140,7 @@ export const SONGS: Song[] = [
     plays: 1876,
     likes: 489,
     townSquare: 'Livingstone Town Square',
-    genre: 'Trap',
+    genre: 'Afro',
   },
 ];
 
