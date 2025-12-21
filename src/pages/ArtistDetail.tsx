@@ -68,13 +68,28 @@ export default function ArtistDetail() {
 
   if (!artist) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-heading font-bold text-foreground mb-4">Artist not found</h1>
-          <Link to="/artists" className="text-primary hover:underline">
-            Back to Artists
-          </Link>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+            <Music className="w-10 h-10 text-primary" />
+          </div>
+          <h1 className="text-2xl font-heading font-bold text-foreground mb-3">Artist Not Found</h1>
+          <p className="text-muted-foreground mb-6">
+            We couldn't find this artist. They may have been removed or the link might be incorrect.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild>
+              <Link to="/artists">Browse Artists</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/">Go Home</Link>
+            </Button>
+          </div>
+        </motion.div>
       </div>
     );
   }
