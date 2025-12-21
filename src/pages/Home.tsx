@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Headphones } from 'lucide-react';
+import { Sparkles, Headphones, Users, ArrowRight } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { useRankedSongs, useRankedArtists } from '@/hooks/usePopularity';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +15,7 @@ import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { DownloadAppBanner } from '@/components/DownloadAppBanner';
 import { LocationPrompt } from '@/components/LocationPrompt';
-
+import { Button } from '@/components/ui/button';
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -171,6 +172,44 @@ export default function Home() {
                 {rankedArtists.slice(0, 4).map((artist, index) => (
                   <ArtistCard key={artist.id} artist={artist} index={index} />
                 ))}
+              </div>
+            </motion.section>
+
+            {/* Discover Community Section */}
+            <motion.section variants={itemVariants}>
+              <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 shine-overlay relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
+                  <motion.div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: 'radial-gradient(circle, hsl(var(--primary) / 0.6) 0%, transparent 70%)',
+                      filter: 'blur(30px)',
+                    }}
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </div>
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="p-2.5 sm:p-3 rounded-xl gradient-primary shadow-glow flex-shrink-0">
+                      <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-semibold text-foreground text-base sm:text-lg mb-1">
+                        Discover Community
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
+                        Connect with fellow music lovers, see who's listening, and build your network in the $ongChainn community.
+                      </p>
+                    </div>
+                  </div>
+                  <Link to="/community" className="w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto gradient-primary text-primary-foreground shadow-glow gap-2">
+                      <span>Explore</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </motion.section>
           </motion.div>
