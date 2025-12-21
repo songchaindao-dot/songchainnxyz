@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Pause, Heart, Share2, Copy, Check, Music, Headphones, Users } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Heart, Share2, Copy, Check, Music, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SongCard } from '@/components/SongCard';
+import { SongComments } from '@/components/SongComments';
 import { useMemo } from 'react';
 
 export default function SongDetail() {
@@ -225,9 +226,12 @@ export default function SongDetail() {
           </div>
         </motion.section>
 
+        {/* Comments Section */}
+        <SongComments songId={song.id} songTitle={song.title} artistName={artist.name} />
+
         {/* More from Artist */}
         {moreSongs.length > 0 && (
-          <section>
+          <section className="mt-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-heading text-xl font-semibold text-foreground">
                 More from {artist.name}
