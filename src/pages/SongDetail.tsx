@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SongCard } from '@/components/SongCard';
+import { SongCommentSection } from '@/components/SongCommentSection';
 import { useMemo } from 'react';
 
 export default function SongDetail() {
@@ -210,9 +211,12 @@ export default function SongDetail() {
           </div>
         </motion.section>
 
+        {/* Comments Section */}
+        <SongCommentSection songId={song.id} />
+
         {/* More from Artist */}
         {moreSongs.length > 0 && (
-          <section>
+          <section className="mt-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-heading text-xl font-semibold text-foreground">
                 More from {artist.name}
