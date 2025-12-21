@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Compass, Sparkles, TrendingUp, Heart, Shuffle, Filter } from 'lucide-react';
+import { Compass, Sparkles, TrendingUp, Heart, Shuffle, Filter, Users, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { SONGS, GENRES, Genre } from '@/data/musicData';
 import { useRankedSongs } from '@/hooks/usePopularity';
@@ -147,11 +148,48 @@ export default function Discover() {
           </p>
         </motion.div>
 
-        {/* Genre Filters */}
+        {/* Meet the Artists CTA */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <Link to="/artists">
+            <motion.div
+              whileHover={{ scale: 1.01, y: -2 }}
+              whileTap={{ scale: 0.99 }}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-secondary/20 border border-primary/20 p-6 cursor-pointer group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-primary/20 border border-primary/30">
+                    <Users className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                      Meet the Artists
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Discover talented creators on $ongChainn
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-primary">
+                  <span className="text-sm font-medium hidden sm:block">View All</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+        </motion.section>
+
+        {/* Genre Filters */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="mb-10"
         >
           <div className="flex items-center justify-between mb-4">
