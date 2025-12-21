@@ -6,6 +6,8 @@ import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { SpinningSongArt } from './SpinningSongArt';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
@@ -67,20 +69,84 @@ export const AudioPlayer = memo(function AudioPlayer() {
   const { currentTime, duration } = usePlayerTime();
   const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
   const { addPlay } = useEngagement();
+  const { user } = useAuth();
   
   const hasCountedPlay = useRef(false);
+  const playStartTime = useRef<number | null>(null);
+  const accumulatedPlayTime = useRef(0);
+  const lastSongId = useRef<string | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  useEffect(() => {
-    if (currentSong && !hasCountedPlay.current) {
-      addPlay(currentSong.id);
-      hasCountedPlay.current = true;
-    }
-  }, [currentSong?.id, addPlay]);
+  const PLAY_THRESHOLD_SECONDS = 3;
 
+  // Record play to database and local state
+  const recordPlay = useCallback(async (songId: string) => {
+    if (hasCountedPlay.current) return;
+    
+    hasCountedPlay.current = true;
+    
+    // Update local engagement state
+    addPlay(songId);
+    
+    // Record to database
+    try {
+      await supabase.from('song_analytics').insert({
+        song_id: songId,
+        event_type: 'play',
+        user_id: user?.id || null,
+      });
+      console.log('Play recorded for song:', songId);
+    } catch (error) {
+      console.error('Error recording play:', error);
+    }
+  }, [addPlay, user?.id]);
+
+  // Reset tracking when song changes
   useEffect(() => {
-    hasCountedPlay.current = false;
+    if (currentSong?.id !== lastSongId.current) {
+      hasCountedPlay.current = false;
+      playStartTime.current = null;
+      accumulatedPlayTime.current = 0;
+      lastSongId.current = currentSong?.id || null;
+    }
   }, [currentSong?.id]);
+
+  // Track play time - count after 3 seconds of actual playback
+  useEffect(() => {
+    if (!currentSong || hasCountedPlay.current) return;
+
+    if (isPlaying) {
+      // Start tracking play time
+      playStartTime.current = Date.now();
+    } else if (playStartTime.current !== null) {
+      // Pause - accumulate the time played
+      const sessionTime = (Date.now() - playStartTime.current) / 1000;
+      accumulatedPlayTime.current += sessionTime;
+      playStartTime.current = null;
+    }
+  }, [isPlaying, currentSong]);
+
+  // Check if threshold reached during playback
+  useEffect(() => {
+    if (!currentSong || hasCountedPlay.current || !isPlaying) return;
+
+    const checkPlayTime = () => {
+      if (playStartTime.current === null) return;
+      
+      const currentSessionTime = (Date.now() - playStartTime.current) / 1000;
+      const totalPlayTime = accumulatedPlayTime.current + currentSessionTime;
+      
+      if (totalPlayTime >= PLAY_THRESHOLD_SECONDS) {
+        recordPlay(currentSong.id);
+      }
+    };
+
+    // Check immediately and then every 500ms
+    checkPlayTime();
+    const interval = setInterval(checkPlayTime, 500);
+    
+    return () => clearInterval(interval);
+  }, [currentSong, isPlaying, recordPlay]);
 
   // Media Session API for background playback
   useEffect(() => {
