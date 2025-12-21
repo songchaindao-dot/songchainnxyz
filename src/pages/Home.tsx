@@ -15,6 +15,7 @@ import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { DownloadAppBanner } from '@/components/DownloadAppBanner';
 import { UpdateAvailableBanner } from '@/components/UpdateAvailableBanner';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { LocationPrompt } from '@/components/LocationPrompt';
 import { Button } from '@/components/ui/button';
 const containerVariants = {
@@ -61,6 +62,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background pb-24 relative">
       <AnimatedBackground variant="default" />
+      <OfflineIndicator />
       <Navigation />
       <UpdateAvailableBanner />
       <NotificationBanner />
