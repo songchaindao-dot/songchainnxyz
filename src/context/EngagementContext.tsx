@@ -139,6 +139,20 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
 
     // Persist to database if user is authenticated
     if (user) {
+      // Check if offline - queue the action for later
+      if (!navigator.onLine) {
+        const queue = JSON.parse(localStorage.getItem('offline_action_queue') || '[]');
+        queue.push({
+          id: crypto.randomUUID(),
+          type: isCurrentlyLiked ? 'unlike_song' : 'like_song',
+          payload: { songId, userId: user.id },
+          timestamp: Date.now(),
+          retries: 0
+        });
+        localStorage.setItem('offline_action_queue', JSON.stringify(queue));
+        return;
+      }
+
       if (isCurrentlyLiked) {
         // Unlike: remove from liked_songs table
         const { error } = await supabase
