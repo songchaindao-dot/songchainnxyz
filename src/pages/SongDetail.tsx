@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Pause, Heart, Share2, Copy, Check, Music, Headphones } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Heart, Music, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
@@ -8,17 +8,11 @@ import { Button } from '@/components/ui/button';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { useSongPopularity } from '@/hooks/usePopularity';
-import { useShare } from '@/hooks/useShare';
 import { cn } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { SongCard } from '@/components/SongCard';
 import { SongComments } from '@/components/SongComments';
-import { useMemo } from 'react';
+import { ShareSongButton } from '@/components/ShareSongButton';
+import { useMemo, useEffect } from 'react';
 
 export default function SongDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,12 +20,57 @@ export default function SongDetail() {
   const { playSong, togglePlay } = usePlayerActions();
   const { toggleLike, isLiked } = useEngagement();
   const { data: popularityData } = useSongPopularity();
-  const { shareSong, copyToClipboard, getShareUrl, shareToX, copied } = useShare();
 
   const song = SONGS.find(s => s.id === id);
   const artist = song ? ARTISTS.find(a => a.id === song.artistId) : null;
   const isCurrentSong = currentSong?.id === song?.id;
   const liked = song ? isLiked(song.id) : false;
+
+  // Update document meta tags for sharing
+  useEffect(() => {
+    if (song && artist) {
+      document.title = `${song.title} by ${artist.name} | $ongChainn`;
+      
+      // Update OG meta tags dynamically
+      const updateMeta = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', property);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      const updateMetaName = (name: string, content: string) => {
+        let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', name);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      const shareUrl = `${window.location.origin}/song/${song.id}`;
+      const description = `Listen to "${song.title}" by ${artist.name} on $ongChainn - the audience-first music streaming platform.`;
+      const imageUrl = song.coverImage || `${window.location.origin}/og.png`;
+
+      updateMeta('og:title', `${song.title} - ${artist.name}`);
+      updateMeta('og:description', description);
+      updateMeta('og:url', shareUrl);
+      updateMeta('og:image', imageUrl);
+      updateMeta('og:type', 'music.song');
+
+      updateMetaName('twitter:title', `${song.title} - ${artist.name}`);
+      updateMetaName('twitter:description', description);
+      updateMetaName('twitter:image', imageUrl);
+
+      return () => {
+        document.title = '$ongChainn — Audience-First Music Streaming';
+      };
+    }
+  }, [song, artist]);
 
   // Get real stats from database
   const songStats = useMemo(() => {
@@ -85,9 +124,6 @@ export default function SongDetail() {
     }
   };
 
-  const handleShare = () => shareSong(song.title, song.artist, song.id);
-  const handleCopyLink = () => copyToClipboard(getShareUrl('song', song.id));
-  const handleShareToX = () => shareToX(`Check out "${song.title}" by ${song.artist} on $ongChainn!`, getShareUrl('song', song.id));
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -197,30 +233,12 @@ export default function SongDetail() {
                   {liked ? 'Liked' : 'Like'}
                 </Button>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="lg" className="gap-2">
-                      <Share2 className="w-5 h-5" />
-                      Share
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem onClick={handleShare} className="gap-2">
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                      Copy Link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareToX} className="gap-2">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                      </svg>
-                      Share on X
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ShareSongButton 
+                  songId={song.id} 
+                  songTitle={song.title} 
+                  artistName={artist.name}
+                  variant="button"
+                />
               </div>
             </div>
           </div>

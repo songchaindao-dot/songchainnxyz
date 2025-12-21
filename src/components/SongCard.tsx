@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart } from 'lucide-react';
+import { Play, Pause, Heart, Share2 } from 'lucide-react';
 import { Song } from '@/data/musicData';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
@@ -8,6 +8,7 @@ import { useSongPopularity } from '@/hooks/usePopularity';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
 import { AIArtwork } from './AIArtwork';
+import { ShareSongButton } from './ShareSongButton';
 
 interface SongCardProps {
   song: Song;
@@ -100,10 +101,15 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
           <p className="text-xs sm:text-sm text-muted-foreground truncate">{song.artist}</p>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2">
           <span className="text-[10px] sm:text-xs text-muted-foreground tabular-nums hidden xs:block">
             {totalPlays.toLocaleString()} plays
           </span>
+          <ShareSongButton 
+            songId={song.id} 
+            songTitle={song.title} 
+            artistName={song.artist}
+          />
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -178,6 +184,11 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               </h3>
               <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
             </div>
+            <ShareSongButton 
+              songId={song.id} 
+              songTitle={song.title} 
+              artistName={song.artist}
+            />
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -261,17 +272,24 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
           <span className="text-xs text-muted-foreground tabular-nums">
             {totalPlays.toLocaleString()} plays
           </span>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleLike}
-            className={cn(
-              "p-2 rounded-full transition-all -mr-2",
-              liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Heart className={cn("w-4 h-4", liked && "fill-current")} />
-          </motion.button>
+          <div className="flex items-center gap-1">
+            <ShareSongButton 
+              songId={song.id} 
+              songTitle={song.title} 
+              artistName={song.artist}
+            />
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleLike}
+              className={cn(
+                "p-2 rounded-full transition-all",
+                liked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className={cn("w-4 h-4", liked && "fill-current")} />
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>

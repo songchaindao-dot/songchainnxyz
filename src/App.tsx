@@ -23,6 +23,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Social = lazy(() => import("./pages/Social"));
 const Community = lazy(() => import("./pages/Community"));
 const AudienceProfile = lazy(() => import("./pages/AudienceProfile"));
+const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -85,6 +86,7 @@ function AppContent() {
                 <Route path="/social" element={<Social />} />
                 <Route path="/community" element={<Community />} />
                 <Route path="/audience/:userId" element={<AudienceProfile />} />
+                <Route path="/install" element={<Install />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
