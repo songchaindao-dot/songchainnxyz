@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, Heart, MessageCircle, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,15 +31,24 @@ const notificationMessages = {
 function NotificationItem({ 
   notification, 
   onRead, 
-  onDelete 
+  onDelete,
+  onNavigate,
 }: { 
   notification: Notification; 
   onRead: (id: string) => void;
   onDelete: (id: string) => void;
+  onNavigate: (notification: Notification) => void;
 }) {
   const Icon = notificationIcons[notification.type];
   const message = notification.message || notificationMessages[notification.type];
   const profile = notification.from_profile;
+
+  const handleClick = () => {
+    if (!notification.is_read) {
+      onRead(notification.id);
+    }
+    onNavigate(notification);
+  };
 
   return (
     <motion.div
@@ -51,7 +61,7 @@ function NotificationItem({
           ? "bg-transparent hover:bg-muted/50" 
           : "bg-primary/10 hover:bg-primary/15"
       )}
-      onClick={() => !notification.is_read && onRead(notification.id)}
+      onClick={handleClick}
     >
       <Avatar className="w-10 h-10 flex-shrink-0">
         <AvatarImage src={profile?.profile_picture_url || undefined} />
@@ -94,6 +104,7 @@ function NotificationItem({
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const { 
     notifications, 
     unreadCount, 
@@ -102,6 +113,31 @@ export function NotificationDropdown() {
     markAllAsRead,
     deleteNotification 
   } = useNotifications();
+
+  const handleNotificationNavigate = (notification: Notification) => {
+    setOpen(false);
+    
+    switch (notification.type) {
+      case 'follow':
+        // Navigate to the follower's profile
+        if (notification.from_user_id) {
+          navigate(`/audience/${notification.from_user_id}`);
+        }
+        break;
+      case 'like':
+      case 'comment':
+      case 'mention':
+        // Navigate to the social feed (post context)
+        if (notification.post_id) {
+          navigate('/social');
+        } else {
+          navigate('/social');
+        }
+        break;
+      default:
+        navigate('/social');
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -162,6 +198,7 @@ export function NotificationDropdown() {
                     notification={notification}
                     onRead={markAsRead}
                     onDelete={deleteNotification}
+                    onNavigate={handleNotificationNavigate}
                   />
                 ))}
               </AnimatePresence>

@@ -1,9 +1,10 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Heart } from 'lucide-react';
 import { Song } from '@/data/musicData';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
+import { useSongPopularity } from '@/hooks/usePopularity';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
 import { AIArtwork } from './AIArtwork';
@@ -19,9 +20,21 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   const { currentSong, isPlaying } = usePlayerState();
   const { playSong, togglePlay } = usePlayerActions();
   const { toggleLike, isLiked } = useEngagement();
+  const { data: popularityData } = useSongPopularity();
 
   const isCurrentSong = currentSong?.id === song.id;
   const liked = isLiked(song.id);
+  
+  // Get real play count from database (total across all users)
+  const totalPlays = useMemo(() => {
+    const songData = popularityData?.find(p => p.song_id === song.id);
+    return songData?.play_count || 0;
+  }, [popularityData, song.id]);
+  
+  const totalLikes = useMemo(() => {
+    const songData = popularityData?.find(p => p.song_id === song.id);
+    return songData?.like_count || 0;
+  }, [popularityData, song.id]);
 
   const handlePlay = useCallback(() => {
     if (isCurrentSong) {
@@ -89,7 +102,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
 
         <div className="flex items-center gap-1 sm:gap-3">
           <span className="text-[10px] sm:text-xs text-muted-foreground tabular-nums hidden xs:block">
-            {song.plays.toLocaleString()} plays
+            {totalPlays.toLocaleString()} plays
           </span>
           <motion.button
             whileHover={{ scale: 1.1 }}
@@ -179,9 +192,9 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
           </div>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="tabular-nums">{song.plays.toLocaleString()} plays</span>
+            <span className="tabular-nums">{totalPlays.toLocaleString()} plays</span>
             <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-            <span className="tabular-nums">{song.likes.toLocaleString()} likes</span>
+            <span className="tabular-nums">{totalLikes.toLocaleString()} likes</span>
           </div>
         </div>
       </motion.div>
@@ -246,7 +259,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground tabular-nums">
-            {song.plays.toLocaleString()} plays
+            {totalPlays.toLocaleString()} plays
           </span>
           <motion.button
             whileHover={{ scale: 1.1 }}
