@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { AudienceProfile } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
+import { SONGS, ARTISTS } from '@/data/musicData';
 
 export interface SongComment {
   id: string;
@@ -65,12 +66,55 @@ export function useSongComments(songId: string) {
   const addComment = useCallback(async (content: string) => {
     if (!user || !songId || !content.trim()) return false;
 
+    const trimmedContent = content.trim();
+    
+    // Client-side validation
+    if (trimmedContent.length < 2) {
+      toast({ title: 'Comment is too short', variant: 'destructive' });
+      return false;
+    }
+    
+    if (trimmedContent.length > 500) {
+      toast({ title: 'Comment is too long (max 500 characters)', variant: 'destructive' });
+      return false;
+    }
+
+    // Get song and artist info for moderation context
+    const song = SONGS.find(s => s.id === songId);
+    const artist = song ? ARTISTS.find(a => a.id === song.artistId) : null;
+
+    // Call moderation edge function
+    try {
+      const { data: moderationResult, error: moderationError } = await supabase.functions.invoke('moderate-comment', {
+        body: {
+          comment: trimmedContent,
+          songTitle: song?.title || 'Unknown',
+          artistName: artist?.name || 'Unknown',
+        },
+      });
+
+      if (moderationError) {
+        console.error('Moderation error:', moderationError);
+        // Continue with posting if moderation fails (graceful degradation)
+      } else if (!moderationResult?.allowed) {
+        toast({ 
+          title: 'Comment not allowed', 
+          description: moderationResult?.reason || 'Please ensure your comment follows our community guidelines.',
+          variant: 'destructive' 
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Moderation request failed:', error);
+      // Continue with posting if moderation request fails
+    }
+
     const { data, error } = await supabase
       .from('song_comments')
       .insert({ 
         song_id: songId, 
         user_id: user.id, 
-        content: content.trim() 
+        content: trimmedContent 
       })
       .select()
       .single();
