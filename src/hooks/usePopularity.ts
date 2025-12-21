@@ -38,10 +38,10 @@ export interface RankedProfile extends ProfilePopularity {
   popularity_score: number;
 }
 
-// Calculate weighted popularity score for songs
-function calculateSongScore(song: Song, dbData?: SongPopularity): number {
-  const plays = (dbData?.play_count || 0) + song.plays;
-  const likes = (dbData?.like_count || 0) + song.likes;
+// Calculate weighted popularity score for songs using ONLY real database data
+function calculateSongScore(dbData?: SongPopularity): number {
+  const plays = dbData?.play_count || 0;
+  const likes = dbData?.like_count || 0;
   const comments = dbData?.comment_count || 0;
   const shares = dbData?.share_count || 0;
   
@@ -139,10 +139,13 @@ export function useRankedSongs() {
   
   const rankedSongs: RankedSong[] = SONGS.map(song => {
     const dbData = popularityData?.find(p => p.song_id === song.id);
-    const score = calculateSongScore(song, dbData);
+    const score = calculateSongScore(dbData);
     
     return {
       ...song,
+      // Override mock data with real database data
+      plays: dbData?.play_count || 0,
+      likes: dbData?.like_count || 0,
       popularity_score: score,
       db_plays: dbData?.play_count || 0,
       db_likes: dbData?.like_count || 0,
