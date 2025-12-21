@@ -198,16 +198,16 @@ export const AudioPlayer = memo(function AudioPlayer() {
         animate={{ y: 0, opacity: 1 }}
         className="fixed bottom-0 left-0 right-0 z-50"
       >
-        {/* Glass background */}
-        <div className="glass-surface border-t border-border/50">
+        {/* Glass background with safe area padding for mobile */}
+        <div className="glass-surface border-t border-border/50 pb-safe">
           <ProgressBar currentTime={currentTime} duration={duration} onSeek={seekTo} />
 
-          <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          <div className="container mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
             <div className="flex items-center justify-between gap-2 sm:gap-4">
               {/* Song info - clickable to expand */}
               <button
                 onClick={handleOpenFullScreen}
-                className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 text-left group"
+                className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 text-left group"
               >
                 <div className="relative flex-shrink-0">
                   <SpinningSongArt isPlaying={isPlaying} size="md" className="shadow-soft" />
@@ -218,41 +218,41 @@ export const AudioPlayer = memo(function AudioPlayer() {
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">{currentSong.artist}</p>
                 </div>
-                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 hidden xs:block" />
+                <ChevronUp className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
               </button>
 
-              {/* Controls */}
-              <div className="flex items-center gap-0.5 sm:gap-2">
+              {/* Controls - more prominent on mobile */}
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={playPrevious}
-                  className="p-1.5 sm:p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect hidden sm:flex"
+                  className="p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect hidden sm:flex"
                 >
                   <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </button>
 
                 <motion.button
                   onClick={togglePlay}
-                  className="p-2.5 sm:p-3 gradient-primary rounded-full shadow-glow press-effect"
+                  className="p-3 sm:p-3 gradient-primary rounded-full shadow-glow press-effect"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   {isPlaying ? (
-                    <Pause className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+                    <Pause className="w-5 h-5 sm:w-5 sm:h-5 text-primary-foreground" />
                   ) : (
-                    <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground ml-0.5" />
+                    <Play className="w-5 h-5 sm:w-5 sm:h-5 text-primary-foreground ml-0.5" />
                   )}
                 </motion.button>
 
                 <button
                   onClick={playNext}
-                  className="p-1.5 sm:p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect"
+                  className="p-2 hover:bg-secondary/80 rounded-full transition-colors press-effect"
                 >
                   <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </button>
               </div>
 
-              {/* Time & Volume */}
-              <div className="hidden sm:flex items-center gap-4 flex-1 justify-end">
+              {/* Time & Volume - desktop only */}
+              <div className="hidden md:flex items-center gap-4 flex-1 justify-end">
                 <TimeDisplay currentTime={currentTime} duration={duration} />
 
                 <div className="flex items-center gap-2 w-28">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Headphones, Users, ArrowRight } from 'lucide-react';
+import { Sparkles, Headphones, Users, ArrowRight, Music } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { useRankedSongs, useRankedArtists } from '@/hooks/usePopularity';
 import { useAuth } from '@/context/AuthContext';
@@ -171,7 +171,20 @@ export default function Home() {
 
             {/* Artists Preview - Ranked by popularity */}
             <motion.section variants={itemVariants}>
-              <h2 className="font-heading text-xl sm:text-2xl font-semibold text-foreground mb-4 sm:mb-6">Top Artists</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="font-heading text-xl sm:text-2xl font-semibold text-foreground">Top Artists</h2>
+                <Link to="/artists">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-primary hover:text-primary/80 hover:bg-primary/10 gap-1.5 text-xs sm:text-sm"
+                  >
+                    <Music className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span>Meet the Artists</span>
+                    <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  </Button>
+                </Link>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {rankedArtists.slice(0, 4).map((artist, index) => (
                   <ArtistCard key={artist.id} artist={artist} index={index} />
