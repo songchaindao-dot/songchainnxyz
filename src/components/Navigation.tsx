@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X, Download } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.webp';
@@ -217,6 +217,23 @@ export function Navigation() {
                     </motion.button>
                   );
                 })}
+
+                {/* Install App Link */}
+                <motion.button
+                  onClick={() => handleNavClick('/install')}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: navItems.length * 0.05 }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-left transition-all",
+                    location.pathname === '/install'
+                      ? "bg-primary/10 text-primary border border-primary/20" 
+                      : "glass text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Install App</span>
+                </motion.button>
               </div>
             </motion.nav>
           </>
