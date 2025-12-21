@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 interface EngagementContextType {
   engagementPoints: number;
@@ -26,6 +28,8 @@ const POINTS_PER_LIKE = 5;
 const STREAK_BONUS = 25;
 
 export function EngagementProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  
   const [engagementPoints, setEngagementPoints] = useState(() => {
     const saved = localStorage.getItem('songchainn_points');
     return saved ? parseInt(saved, 10) : 0;
@@ -46,10 +50,31 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
     return saved ? parseInt(saved, 10) : 0;
   });
   
-  const [likedSongs, setLikedSongs] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('songchainn_likes');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  const [likedSongs, setLikedSongs] = useState<Set<string>>(new Set());
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Sync liked songs from database when user logs in
+  useEffect(() => {
+    const syncLikesFromDatabase = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('liked_songs')
+          .select('song_id')
+          .eq('user_id', user.id);
+        
+        if (!error && data) {
+          setLikedSongs(new Set(data.map(item => item.song_id)));
+        }
+      } else {
+        // Fall back to localStorage for non-authenticated users
+        const saved = localStorage.getItem('songchainn_likes');
+        setLikedSongs(saved ? new Set(JSON.parse(saved)) : new Set());
+      }
+      setIsInitialized(true);
+    };
+
+    syncLikesFromDatabase();
+  }, [user]);
 
   // Persist to localStorage
   useEffect(() => {
@@ -69,19 +94,40 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
   }, [totalPlays]);
 
   useEffect(() => {
-    localStorage.setItem('songchainn_likes', JSON.stringify([...likedSongs]));
-  }, [likedSongs]);
+    // Only persist to localStorage for non-authenticated users
+    if (!user && isInitialized) {
+      localStorage.setItem('songchainn_likes', JSON.stringify([...likedSongs]));
+    }
+  }, [likedSongs, user, isInitialized]);
 
-  const addPlay = useCallback((songId: string) => {
+  const addPlay = useCallback(async (songId: string) => {
     setTodayPlays(prev => prev + 1);
     setTotalPlays(prev => prev + 1);
     setEngagementPoints(prev => prev + POINTS_PER_PLAY);
-  }, []);
 
-  const toggleLike = useCallback((songId: string) => {
+    // Record play event in database
+    if (user) {
+      await supabase.from('song_analytics').insert({
+        song_id: songId,
+        user_id: user.id,
+        event_type: 'play'
+      });
+    } else {
+      // For anonymous users, still record the play without user_id
+      await supabase.from('song_analytics').insert({
+        song_id: songId,
+        event_type: 'play'
+      });
+    }
+  }, [user]);
+
+  const toggleLike = useCallback(async (songId: string) => {
+    const isCurrentlyLiked = likedSongs.has(songId);
+    
+    // Optimistically update UI
     setLikedSongs(prev => {
       const newLikes = new Set(prev);
-      if (newLikes.has(songId)) {
+      if (isCurrentlyLiked) {
         newLikes.delete(songId);
         setEngagementPoints(p => Math.max(0, p - POINTS_PER_LIKE));
       } else {
@@ -90,7 +136,49 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
       }
       return newLikes;
     });
-  }, []);
+
+    // Persist to database if user is authenticated
+    if (user) {
+      if (isCurrentlyLiked) {
+        // Unlike: remove from liked_songs table
+        const { error } = await supabase
+          .from('liked_songs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('song_id', songId);
+        
+        if (error) {
+          console.error('Error unliking song:', error);
+          // Revert optimistic update on error
+          setLikedSongs(prev => new Set([...prev, songId]));
+          setEngagementPoints(p => p + POINTS_PER_LIKE);
+        }
+      } else {
+        // Like: add to liked_songs table
+        const { error } = await supabase
+          .from('liked_songs')
+          .insert({ user_id: user.id, song_id: songId });
+        
+        if (error) {
+          console.error('Error liking song:', error);
+          // Revert optimistic update on error
+          setLikedSongs(prev => {
+            const newLikes = new Set(prev);
+            newLikes.delete(songId);
+            return newLikes;
+          });
+          setEngagementPoints(p => Math.max(0, p - POINTS_PER_LIKE));
+        } else {
+          // Also record a like event in song_analytics for popularity tracking
+          await supabase.from('song_analytics').insert({
+            song_id: songId,
+            user_id: user.id,
+            event_type: 'like'
+          });
+        }
+      }
+    }
+  }, [user, likedSongs]);
 
   const isLiked = useCallback((songId: string) => {
     return likedSongs.has(songId);
