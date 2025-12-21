@@ -22,6 +22,7 @@ export type Database = {
           created_at: string
           id: string
           is_public: boolean
+          location: string | null
           onboarding_completed: boolean
           profile_name: string
           profile_picture_url: string | null
@@ -36,6 +37,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_public?: boolean
+          location?: string | null
           onboarding_completed?: boolean
           profile_name: string
           profile_picture_url?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_public?: boolean
+          location?: string | null
           onboarding_completed?: boolean
           profile_name?: string
           profile_picture_url?: string | null

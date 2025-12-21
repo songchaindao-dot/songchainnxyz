@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Headphones } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { useRankedSongs, useRankedArtists } from '@/hooks/usePopularity';
+import { useAuth } from '@/context/AuthContext';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
 import { EngagementPanel } from '@/components/EngagementPanel';
@@ -11,6 +13,7 @@ import { AnimatedBackground } from '@/components/ui/animated-background';
 import { FeaturedTracksSection } from '@/components/FeaturedTracksSection';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { DownloadAppBanner } from '@/components/DownloadAppBanner';
+import { LocationPrompt } from '@/components/LocationPrompt';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -30,9 +33,28 @@ const itemVariants = {
 export default function Home() {
   const { rankedSongs } = useRankedSongs();
   const { rankedArtists } = useRankedArtists();
+  const { audienceProfile, refreshProfile } = useAuth();
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   
   const featuredSongs = rankedSongs.slice(0, 3);
   const allSongs = rankedSongs;
+
+  // Check if user needs to add location
+  useEffect(() => {
+    if (audienceProfile && !audienceProfile.location) {
+      // Check if user has skipped recently (within last 24 hours)
+      const skippedAt = localStorage.getItem('location_prompt_skipped');
+      if (skippedAt) {
+        const hoursSinceSkip = (Date.now() - parseInt(skippedAt)) / (1000 * 60 * 60);
+        if (hoursSinceSkip < 24) {
+          return; // Don't show again within 24 hours
+        }
+      }
+      // Show prompt after a short delay
+      const timer = setTimeout(() => setShowLocationPrompt(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [audienceProfile]);
 
   return (
     <div className="min-h-screen bg-background pb-24 relative">
@@ -193,6 +215,16 @@ export default function Home() {
       </main>
 
       <AudioPlayer />
+
+      {/* Location Prompt for existing users */}
+      <LocationPrompt
+        isOpen={showLocationPrompt}
+        onClose={() => setShowLocationPrompt(false)}
+        onSuccess={() => {
+          setShowLocationPrompt(false);
+          refreshProfile();
+        }}
+      />
     </div>
   );
 }

@@ -18,6 +18,7 @@ export interface AudienceProfile {
   cover_photo_url: string | null;
   x_profile_link: string | null;
   base_profile_link: string | null;
+  location: string | null;
   onboarding_completed: boolean;
   created_at: string;
   updated_at: string;

@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Filter,
   Grid3X3,
-  List
+  List,
+  MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -37,6 +38,7 @@ interface UserProfile {
   profile_picture_url: string | null;
   cover_photo_url: string | null;
   bio: string | null;
+  location: string | null;
   created_at: string;
   x_profile_link: string | null;
   base_profile_link: string | null;
@@ -346,7 +348,14 @@ export default function Community() {
                         </Badge>
                       )}
                     </div>
-                    
+                    {/* Location */}
+                    {profile.location && (
+                      <p className="text-sm text-primary flex items-center gap-1 mb-2">
+                        <MapPin className="w-3 h-3" />
+                        {profile.location}
+                      </p>
+                    )}
+
                     {profile.bio && (
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                         {profile.bio}
