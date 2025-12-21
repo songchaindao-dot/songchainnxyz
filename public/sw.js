@@ -30,8 +30,14 @@ self.addEventListener('activate', (event) => {
   clients.claim();
 });
 
-// Handle messages from the main thread for caching audio
+// Handle messages from the main thread
 self.addEventListener('message', (event) => {
+  // Skip waiting when requested (for update flow)
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   if (event.data && event.data.type === 'CACHE_AUDIO') {
     const { url, songId } = event.data;
     caches.open(AUDIO_CACHE).then((cache) => {
