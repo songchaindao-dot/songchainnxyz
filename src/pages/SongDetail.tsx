@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Pause, Heart, Share2, Copy, Check, Music, Headphones } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Heart, Share2, Copy, Check, Music, Headphones, Users } from 'lucide-react';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { Navigation } from '@/components/Navigation';
 import { AudioPlayer } from '@/components/AudioPlayer';
@@ -50,13 +50,28 @@ export default function SongDetail() {
 
   if (!song || !artist) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-heading font-bold text-foreground mb-4">Song not found</h1>
-          <Link to="/" className="text-primary hover:underline">
-            Back to Home
-          </Link>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+            <Music className="w-10 h-10 text-primary" />
+          </div>
+          <h1 className="text-2xl font-heading font-bold text-foreground mb-3">Song Not Found</h1>
+          <p className="text-muted-foreground mb-6">
+            We couldn't find this song. It may have been removed or the link might be incorrect.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild>
+              <Link to="/">Browse Music</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/artists">View Artists</Link>
+            </Button>
+          </div>
+        </motion.div>
       </div>
     );
   }
