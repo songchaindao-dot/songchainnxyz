@@ -12,9 +12,8 @@ import { InviteFriends } from '@/components/InviteFriends';
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/discover', label: 'Discover', icon: Compass },
-  { path: '/artists', label: 'Artists', icon: Users },
-  { path: '/social', label: 'Social', icon: MessageCircle },
-  { path: '/education', label: 'Learn', icon: BookOpen },
+  { path: '/community', label: 'Community', icon: Users },
+  { path: '/social', label: 'Feed', icon: MessageCircle },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
