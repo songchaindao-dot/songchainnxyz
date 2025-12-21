@@ -6,7 +6,7 @@ export interface SocialPost {
   content: string | null;
   song_id: string | null;
   playlist_id: string | null;
-  post_type: 'text' | 'song_share' | 'playlist_share' | 'listening';
+  post_type: 'text' | 'song_share' | 'playlist_share' | 'listening' | 'welcome' | 'song_like';
   created_at: string;
   updated_at: string;
 }

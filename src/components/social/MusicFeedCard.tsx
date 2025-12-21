@@ -11,7 +11,8 @@ import {
   Check,
   Disc3,
   Copy,
-  Link
+  PartyPopper,
+  Sparkles
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SocialPostWithProfile } from '@/types/social';
@@ -57,6 +58,8 @@ export function MusicFeedCard({
   const artist = song ? ARTISTS.find(a => a.id === song.artistId) : null;
   const isOwnPost = user?.id === post.user_id;
   const isThisSongPlaying = currentSong?.id === song?.id && isPlaying;
+  const isWelcomePost = post.post_type === 'welcome';
+  const isSongLikePost = post.post_type === 'song_like';
 
   const handleShare = () => {
     if (song && artist) {
@@ -125,10 +128,89 @@ export function MusicFeedCard({
       {/* Background Visual */}
       <div 
         className="absolute inset-0 cursor-pointer"
-        onClick={handlePlayPause}
+        onClick={song ? handlePlayPause : undefined}
         onDoubleClick={handleDoubleTap}
       >
-        {song ? (
+        {isWelcomePost ? (
+          // Welcome post - celebration background
+          <div className="relative w-full h-full bg-gradient-to-br from-primary/40 via-purple-500/30 to-pink-500/40 flex items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            <motion.div 
+              className="relative z-10 text-center px-8"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+              >
+                <PartyPopper className="w-24 h-24 text-yellow-400 mx-auto mb-6" />
+              </motion.div>
+              <h2 className="text-3xl font-bold text-white mb-2">Welcome!</h2>
+              <p className="text-white/80 text-lg">{post.profile?.profile_name || 'Someone new'}</p>
+              <p className="text-white/60 text-sm mt-2">just joined $ongChainn</p>
+            </motion.div>
+          </div>
+        ) : isSongLikePost && song ? (
+          // Song like post - show the song with a heart overlay
+          <div className="relative w-full h-full">
+            <img 
+              src={song.coverImage} 
+              alt={song.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/20" />
+            
+            {/* Heart animation overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                className="relative"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', damping: 10 }}
+              >
+                <motion.div
+                  className="w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-red-500/50 shadow-2xl"
+                  animate={isThisSongPlaying ? { rotate: 360 } : {}}
+                  transition={isThisSongPlaying ? { duration: 3, repeat: Infinity, ease: 'linear' } : {}}
+                >
+                  <video
+                    ref={videoRef}
+                    src={songArtVideo}
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+                <motion.div
+                  className="absolute -top-4 -right-4 bg-red-500 rounded-full p-3"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  <Heart className="w-8 h-8 text-white fill-white" />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* Play/Pause Overlay */}
+            <AnimatePresence>
+              {!isThisSongPlaying && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                >
+                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                    <Play className="w-10 h-10 text-white fill-white ml-1" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : song ? (
           <div className="relative w-full h-full">
             <img 
               src={song.coverImage} 
@@ -298,19 +380,39 @@ export function MusicFeedCard({
           )}
         </button>
 
-        {/* Content */}
-        {post.content && (
+        {/* Content based on post type */}
+        {isWelcomePost ? (
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-yellow-400" />
+            <p className="text-white/90 text-sm">
+              Welcome to the community! Say hello 👋
+            </p>
+          </div>
+        ) : isSongLikePost && song ? (
+          <div className="mb-3">
+            <p className="text-white/90 text-sm flex items-center gap-2">
+              <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+              liked "{song.title}" by {artist?.name}
+            </p>
+          </div>
+        ) : post.content ? (
           <p className="text-white/90 text-sm mb-3 line-clamp-2">{post.content}</p>
-        )}
+        ) : null}
 
         {/* Song Info */}
-        {song && (
+        {song && !isWelcomePost && (
           <motion.div 
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full py-2 px-3 w-fit"
+            className={`flex items-center gap-2 backdrop-blur-md rounded-full py-2 px-3 w-fit ${
+              isSongLikePost ? 'bg-red-500/20' : 'bg-white/10'
+            }`}
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
           >
-            <Music className="w-4 h-4 text-white" />
+            {isSongLikePost ? (
+              <Heart className="w-4 h-4 text-red-400 fill-red-400" />
+            ) : (
+              <Music className="w-4 h-4 text-white" />
+            )}
             <div className="overflow-hidden max-w-[200px]">
               <motion.p 
                 className="text-sm text-white font-medium whitespace-nowrap"

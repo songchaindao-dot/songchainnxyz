@@ -116,7 +116,7 @@ export function useSocial() {
         content: post.content,
         song_id: post.song_id,
         playlist_id: post.playlist_id,
-        post_type: post.post_type as 'text' | 'song_share' | 'playlist_share' | 'listening',
+        post_type: post.post_type as 'text' | 'song_share' | 'playlist_share' | 'listening' | 'welcome' | 'song_like',
         created_at: post.created_at,
         updated_at: post.updated_at,
         profile: profilesMap.get(post.user_id),
@@ -143,6 +143,32 @@ export function useSocial() {
     if (user) {
       fetchPosts();
     }
+  }, [user, fetchPosts]);
+
+  // Real-time subscription for new posts
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('social-posts-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'social_posts'
+        },
+        (payload) => {
+          console.log('New post received:', payload);
+          // Refetch posts when a new post is created
+          fetchPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchPosts]);
 
   const createPost = useCallback(async (
