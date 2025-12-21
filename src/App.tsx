@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { PlayerProvider } from "@/context/PlayerContext";
 import { EngagementProvider } from "@/context/EngagementContext";
 import { OfflineQueueProvider } from "@/hooks/useOfflineQueue";
-
+import { BottomTabBar } from "@/components/BottomTabBar";
 // Lazy load pages for better initial load performance
 const Home = lazy(() => import("./pages/Home"));
 const Discover = lazy(() => import("./pages/Discover"));
@@ -76,20 +76,23 @@ function AppContent() {
         <EngagementProvider>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/discover" element={<Discover />} />
-                <Route path="/artists" element={<Artists />} />
-                <Route path="/artist/:id" element={<ArtistDetail />} />
-                <Route path="/song/:id" element={<SongDetail />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/social" element={<Social />} />
-                <Route path="/community" element={<Community />} />
-                <Route path="/audience/:userId" element={<AudienceProfile />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <div className="pb-20 lg:pb-0">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/discover" element={<Discover />} />
+                  <Route path="/artists" element={<Artists />} />
+                  <Route path="/artist/:id" element={<ArtistDetail />} />
+                  <Route path="/song/:id" element={<SongDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/social" element={<Social />} />
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/audience/:userId" element={<AudienceProfile />} />
+                  <Route path="/install" element={<Install />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <BottomTabBar />
             </Suspense>
           </BrowserRouter>
         </EngagementProvider>
