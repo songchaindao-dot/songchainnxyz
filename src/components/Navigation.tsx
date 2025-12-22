@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X, Download, LogOut } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X, Download, LogOut, Wallet } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
 import { useAuth } from '@/context/AuthContext';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.webp';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
@@ -23,7 +24,8 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { engagementPoints, currentStreak } = useEngagement();
-  const { signOut } = useAuth();
+  const { signOut, walletAddress } = useAuth();
+  const { balance, isLoading: isBalanceLoading } = useWalletBalance(walletAddress);
   const [showInvite, setShowInvite] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -44,6 +46,10 @@ export function Navigation() {
     } catch (error) {
       toast.error('Failed to sign out');
     }
+  };
+
+  const truncateAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -96,6 +102,26 @@ export function Navigation() {
 
             {/* Right side actions */}
             <div className="flex items-center gap-1 sm:gap-2">
+              {/* Wallet Balance - shown when connected */}
+              {walletAddress && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl glass text-xs sm:text-sm cursor-pointer"
+                  onClick={() => navigate('/profile')}
+                  title={walletAddress}
+                >
+                  <Wallet className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-foreground font-medium">
+                    {isBalanceLoading ? '...' : balance ? `${balance} ETH` : '0 ETH'}
+                  </span>
+                  <span className="text-muted-foreground text-xs hidden md:inline">
+                    ({truncateAddress(walletAddress)})
+                  </span>
+                </motion.div>
+              )}
+
               {/* Desktop stats - hidden on mobile */}
               <div className="hidden md:flex items-center gap-2">
                 <motion.div
@@ -208,6 +234,25 @@ export function Navigation() {
                   <X className="w-5 h-5" />
                 </motion.button>
               </div>
+
+              {/* Wallet Info for Mobile */}
+              {walletAddress && (
+                <div className="p-4 border-b border-border/50">
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-xl glass">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {truncateAddress(walletAddress)}
+                      </p>
+                      <p className="text-xs text-primary font-semibold">
+                        {isBalanceLoading ? 'Loading...' : balance ? `${balance} ETH` : '0 ETH'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Mobile Stats */}
               <div className="p-4 border-b border-border/50 flex items-center gap-3">
