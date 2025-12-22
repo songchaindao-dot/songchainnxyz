@@ -17,9 +17,9 @@ interface UnlockSongModalProps {
   onWalletConnected?: (address: string) => void;
 }
 
-// Pricing options
-const UNLOCK_PRICE_ETH = "0.0001"; // ~$0.30 - streaming access only
-const BUY_PRICE_ETH = "0.0003";    // ~$1.00 - full ownership
+// Pricing options (ETH equivalents at ~$3,500/ETH)
+const UNLOCK_PRICE_ETH = "0.00009";  // ~$0.30 USD - streaming access only
+const BUY_PRICE_ETH = "0.00029";     // ~$1.00 USD - full ownership
 
 type Step = 'connect' | 'select' | 'confirm' | 'signing' | 'processing' | 'success' | 'error';
 type PurchaseType = 'unlock' | 'buy';
