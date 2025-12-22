@@ -28,7 +28,7 @@ interface SongOwnership {
   isPreviewOnly: boolean;
   isLocked: boolean;
   checkOwnership: () => Promise<void>;
-  unlockSong: (ethAmount: string, walletAddressOverride?: string) => Promise<{ success: boolean; error?: string }>;
+  unlockSong: (ethAmount: string, walletAddressOverride?: string, onStatusUpdate?: (status: string) => void) => Promise<{ success: boolean; error?: string }>;
   recordPreviewPlay: () => void;
   recordOfflinePlay: () => number;
 }
@@ -128,8 +128,12 @@ export function useSongOwnership(songId: string): SongOwnership {
     }
   }, [userAddress, isTokenGated, checkOwnership]);
   
-  // Purchase/unlock song - accepts optional wallet address for freshly connected wallets
-  const unlockSong = useCallback(async (ethAmount: string, walletAddressOverride?: string): Promise<{ success: boolean; error?: string }> => {
+  // Purchase/unlock song - accepts optional wallet address and status callback
+  const unlockSong = useCallback(async (
+    ethAmount: string, 
+    walletAddressOverride?: string,
+    onStatusUpdate?: (status: string) => void
+  ): Promise<{ success: boolean; error?: string }> => {
     if (!isTokenGated) {
       return { success: false, error: 'Song is not token-gated' };
     }
@@ -142,11 +146,12 @@ export function useSongOwnership(songId: string): SongOwnership {
     }
     
     const priceWei = parseEthToWei(ethAmount);
-    const result = await buySong(songId, 1, priceWei);
+    
+    // Pass status callback to buySong for real-time updates
+    const result = await buySong(songId, 1, priceWei, onStatusUpdate);
     
     if (result.success) {
-      // Wait a moment for transaction to be indexed
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      onStatusUpdate?.('Finalizing...');
       // Clear preview data since user now owns the song
       clearPreviewData(songId, addressToUse);
       setPreviewUsed(false);

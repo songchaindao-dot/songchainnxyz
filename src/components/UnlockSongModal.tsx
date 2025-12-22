@@ -13,7 +13,7 @@ interface UnlockSongModalProps {
   song: Song;
   isOpen: boolean;
   onClose: () => void;
-  onUnlock: (ethAmount: string, walletAddress?: string) => Promise<{ success: boolean; error?: string }>;
+  onUnlock: (ethAmount: string, walletAddress?: string, onStatusUpdate?: (status: string) => void) => Promise<{ success: boolean; error?: string }>;
   walletAddress?: string;
   onWalletConnected?: (address: string) => void;
 }
@@ -38,6 +38,7 @@ export function UnlockSongModal({
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState(walletAddress);
+  const [processingStatus, setProcessingStatus] = useState<string>('Processing...');
   const { balance, isLoading: isBalanceLoading } = useWalletBalance(connectedAddress || null);
 
   const hasWallet = hasWalletProvider();
@@ -51,6 +52,7 @@ export function UnlockSongModal({
       setStep(isConnected ? 'select' : 'connect');
       setError(null);
       setPurchaseType('unlock');
+      setProcessingStatus('Processing...');
     }
   }, [isOpen, isConnected]);
 
@@ -96,14 +98,17 @@ export function UnlockSongModal({
 
     setStep('signing');
     setError(null);
+    setProcessingStatus('Preparing transaction...');
 
     try {
       // Show signing step briefly
       await new Promise(resolve => setTimeout(resolve, 500));
       setStep('processing');
       
-      // Pass the wallet address to the unlock function
-      const result = await onUnlock(selectedPrice, connectedAddress);
+      // Pass the wallet address and status callback to the unlock function
+      const result = await onUnlock(selectedPrice, connectedAddress, (status) => {
+        setProcessingStatus(status);
+      });
       
       if (result.success) {
         setStep('success');
@@ -299,13 +304,32 @@ export function UnlockSongModal({
                 animate={{ opacity: 1 }}
                 className="text-center py-4 sm:py-6"
               >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center relative">
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-primary/30"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  />
                   <Loader2 size={28} className="text-primary animate-spin" />
                 </div>
                 <h3 className="text-lg font-semibold">Processing Transaction</h3>
-                <p className="text-muted-foreground text-sm mt-2">
-                  Your transaction is being processed on Base
-                </p>
+                <motion.p 
+                  key={processingStatus}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-muted-foreground text-sm mt-2"
+                >
+                  {processingStatus}
+                </motion.p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span>Do not close this window</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground/60">
+                    Song will unlock once confirmed on blockchain
+                  </p>
+                </div>
               </motion.div>
             )}
 
