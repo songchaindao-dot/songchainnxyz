@@ -377,7 +377,7 @@ export function UnlockSongModal({
                     <div>
                       <p className="font-medium">No wallet detected</p>
                       <p className="text-xs mt-1 text-amber-500/80">
-                        Install MetaMask or Coinbase Wallet to continue.
+                        Install MetaMask, Coinbase Wallet, or any wallet that supports Base network.
                       </p>
                     </div>
                   </div>

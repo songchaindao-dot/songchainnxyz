@@ -319,18 +319,18 @@ export default function Auth() {
                     <Wallet className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="font-heading text-xl font-semibold text-foreground mb-2">
-                    Connect Your Base Wallet
+                    Connect Your Wallet
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Base Wallet is required to access and listen to music on $ongChainn.
+                    Any wallet that supports Base network works — MetaMask, Coinbase Wallet, Rainbow, and more.
                   </p>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 mb-6">
                   <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your Base Wallet supports culture, identity, and future ownership on $ongChainn. 
-                    Music streaming requires wallet verification.
+                    Your wallet supports culture, identity, and future ownership on $ongChainn. 
+                    Music streaming requires wallet verification on Base network.
                   </p>
                 </div>
 
@@ -348,20 +348,31 @@ export default function Auth() {
                   {getButtonContent()}
                 </Button>
 
-                {(!isWalletDetected || showInstallPrompt) && (
+                {!hasWallet && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      {showInstallPrompt ? "No wallet detected:" : "Don't have a wallet?"}
+                      No wallet detected. Install one:
                     </p>
-                    <a
-                      href="https://metamask.io/download/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
-                    >
-                      Download MetaMask
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                    <div className="flex gap-2">
+                      <a
+                        href="https://metamask.io/download/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
+                      >
+                        MetaMask
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href="https://www.coinbase.com/wallet"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
+                      >
+                        Coinbase
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
                 )}
               </motion.div>
@@ -371,10 +382,10 @@ export default function Auth() {
                 <div className="text-center mb-6">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs font-medium text-primary mb-4">
                     <Shield className="w-3.5 h-3.5" />
-                    Base Wallet Required
+                    Base Network Wallet Required
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Connect with any Base-compatible wallet to enter SongChainn. This supports culture, identity, and future ownership.
+                    Connect with any wallet that supports Base network — MetaMask, Coinbase Wallet, Rainbow, etc.
                   </p>
                 </div>
 
@@ -403,10 +414,10 @@ export default function Auth() {
                   {getButtonContent()}
                 </Button>
 
-                {(!isWalletDetected || showInstallPrompt) && (
+                {!hasWallet && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      {showInstallPrompt ? "No wallet detected. Install one to continue:" : "Don't have a wallet yet?"}
+                      No wallet detected. Install one to continue:
                     </p>
                     <div className="flex gap-2">
                       <a
@@ -419,12 +430,12 @@ export default function Auth() {
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                       <a
-                        href="https://base.app/invite/imanafrikah/WTL0V0H3"
+                        href="https://www.coinbase.com/wallet"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
                       >
-                        Base App
+                        Coinbase
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     </div>
