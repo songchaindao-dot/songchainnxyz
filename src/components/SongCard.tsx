@@ -13,7 +13,6 @@ import { ShareSongButton } from './ShareSongButton';
 import { OwnershipBadge } from './OwnershipBadge';
 import { UnlockSongModal } from './UnlockSongModal';
 import { useAuth } from '@/context/AuthContext';
-import { isBaseAppAvailable, connectWithBaseApp, generateNonce } from '@/lib/baseWallet';
 import { toast } from 'sonner';
 
 interface SongCardProps {
@@ -41,7 +40,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   } = useSongOwnership(song.id);
   
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [isConnected, setIsConnected] = useState(!!user?.user_metadata?.wallet_address);
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(user?.user_metadata?.wallet_address);
 
   const isCurrentSong = currentSong?.id === song.id;
   const liked = isLiked(song.id);
@@ -58,24 +57,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
     return songData?.like_count || 0;
   }, [popularityData, song.id]);
 
-  const handleConnectWallet = useCallback(async () => {
-    if (!isBaseAppAvailable()) {
-      toast.error('Please install Base App to unlock songs');
-      return;
-    }
-    
-    try {
-      const nonce = generateNonce();
-      const result = await connectWithBaseApp(nonce);
-      if (result.success && result.address) {
-        setIsConnected(true);
-        toast.success('Wallet connected!');
-      } else {
-        toast.error(result.error || 'Failed to connect wallet');
-      }
-    } catch (error) {
-      toast.error('Failed to connect wallet');
-    }
+  const handleWalletConnected = useCallback((address: string) => {
+    setWalletAddress(address);
   }, []);
 
   const handlePlay = useCallback(() => {
@@ -194,8 +177,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
             isOpen={showUnlockModal}
             onClose={() => setShowUnlockModal(false)}
             onUnlock={unlockSong}
-            isConnected={isConnected}
-            onConnectWallet={handleConnectWallet}
+            walletAddress={walletAddress}
+            onWalletConnected={handleWalletConnected}
           />
         )}
       </>
@@ -306,8 +289,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
             isOpen={showUnlockModal}
             onClose={() => setShowUnlockModal(false)}
             onUnlock={unlockSong}
-            isConnected={isConnected}
-            onConnectWallet={handleConnectWallet}
+            walletAddress={walletAddress}
+            onWalletConnected={handleWalletConnected}
           />
         )}
       </>

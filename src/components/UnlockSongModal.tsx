@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet } from 'lucide-react';
+import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Song } from '@/data/musicData';
 import { formatEthPrice } from '@/lib/songRegistry';
+import { connectWallet, hasWalletProvider } from '@/lib/baseWallet';
+import { toast } from 'sonner';
 
 interface UnlockSongModalProps {
   song: Song;
   isOpen: boolean;
   onClose: () => void;
   onUnlock: (ethAmount: string) => Promise<{ success: boolean; error?: string }>;
-  isConnected: boolean;
-  onConnectWallet: () => void;
+  walletAddress?: string;
+  onWalletConnected?: (address: string) => void;
 }
 
 // Default price in Wei (0.001 ETH for testing)
@@ -22,16 +24,45 @@ export function UnlockSongModal({
   isOpen,
   onClose,
   onUnlock,
-  isConnected,
-  onConnectWallet
+  walletAddress,
+  onWalletConnected
 }: UnlockSongModalProps) {
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState(walletAddress);
 
   const priceEth = formatEthPrice(DEFAULT_PRICE_WEI);
+  const hasWallet = hasWalletProvider();
+  const isConnected = !!connectedAddress;
+
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    setError(null);
+
+    try {
+      const result = await connectWallet();
+      if (result.success && result.address) {
+        setConnectedAddress(result.address);
+        onWalletConnected?.(result.address);
+        toast.success('Wallet connected!');
+      } else {
+        setError(result.error || 'Failed to connect wallet');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Connection failed');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const handleUnlock = async () => {
+    if (!isConnected) {
+      await handleConnectWallet();
+      return;
+    }
+
     setIsUnlocking(true);
     setError(null);
 
@@ -39,6 +70,7 @@ export function UnlockSongModal({
       const result = await onUnlock(priceEth);
       if (result.success) {
         setSuccess(true);
+        toast.success('Song unlocked! You now have full access.');
         setTimeout(() => {
           onClose();
           setSuccess(false);
@@ -145,6 +177,14 @@ export function UnlockSongModal({
                         {song.artistWallet?.slice(0, 6)}...{song.artistWallet?.slice(-4)}
                       </span>
                     </div>
+                    {isConnected && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Your Wallet</span>
+                        <span className="font-mono text-xs text-primary">
+                          {connectedAddress?.slice(0, 6)}...{connectedAddress?.slice(-4)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -171,6 +211,19 @@ export function UnlockSongModal({
                   </ul>
                 </div>
 
+                {/* No wallet warning */}
+                {!hasWallet && (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm flex items-start gap-2">
+                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">No wallet detected</p>
+                      <p className="text-xs mt-1 text-amber-500/80">
+                        Install MetaMask, Coinbase Wallet, or another Web3 wallet to continue.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {error && (
                   <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                     {error}
@@ -180,11 +233,21 @@ export function UnlockSongModal({
                 {/* Actions */}
                 {!isConnected ? (
                   <Button
-                    onClick={onConnectWallet}
+                    onClick={handleConnectWallet}
+                    disabled={isConnecting || !hasWallet}
                     className="w-full gradient-primary text-primary-foreground"
                   >
-                    <Wallet size={18} className="mr-2" />
-                    Connect Wallet to Unlock
+                    {isConnecting ? (
+                      <>
+                        <Loader2 size={18} className="mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet size={18} className="mr-2" />
+                        Connect Wallet
+                      </>
+                    )}
                   </Button>
                 ) : (
                   <Button
@@ -195,7 +258,7 @@ export function UnlockSongModal({
                     {isUnlocking ? (
                       <>
                         <Loader2 size={18} className="mr-2 animate-spin" />
-                        Unlocking...
+                        Confirming in Wallet...
                       </>
                     ) : (
                       <>
