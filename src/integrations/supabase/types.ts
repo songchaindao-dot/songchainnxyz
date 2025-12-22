@@ -636,6 +636,18 @@ export type Database = {
         Args: { p_new_user_id: string; p_referral_code: string }
         Returns: boolean
       }
+      get_song_popularity: {
+        Args: never
+        Returns: {
+          comment_count: number
+          like_count: number
+          play_count: number
+          popularity_score: number
+          share_count: number
+          song_id: string
+          view_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

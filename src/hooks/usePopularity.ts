@@ -99,16 +99,20 @@ export function useSongPopularity() {
   return useQuery({
     queryKey: ['song-popularity'],
     queryFn: async () => {
+      // Use secure RPC function that requires authentication
       const { data, error } = await supabase
-        .from('song_popularity')
-        .select('*');
+        .rpc('get_song_popularity');
       
       if (error) {
         console.error('Error fetching song popularity:', error);
-        return [];
+        // Fallback to direct query for unauthenticated users (will return empty if RLS blocks)
+        const { data: fallbackData } = await supabase
+          .from('song_popularity')
+          .select('*');
+        return (fallbackData || []) as SongPopularity[];
       }
       
-      return data as SongPopularity[];
+      return (data || []) as SongPopularity[];
     },
     staleTime: 1000 * 60 * 2, // 2 minutes (shorter for real-time updates)
   });
