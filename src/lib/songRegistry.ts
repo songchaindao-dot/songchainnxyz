@@ -238,16 +238,61 @@ export async function checkSongBalance(userAddress: string, songId: string): Pro
 }
 
 /**
+ * Wait for a transaction to be confirmed on the blockchain
+ * Returns the transaction receipt once confirmed
+ */
+export async function waitForTransaction(
+  txHash: string,
+  maxAttempts: number = 30,
+  intervalMs: number = 2000
+): Promise<{ confirmed: boolean; receipt?: any; error?: string }> {
+  const provider = getWalletProvider();
+  if (!provider) {
+    return { confirmed: false, error: "No wallet provider" };
+  }
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const receipt = await provider.request({
+        method: "eth_getTransactionReceipt",
+        params: [txHash]
+      });
+
+      if (receipt) {
+        // Check if transaction was successful (status = 0x1)
+        const status = receipt.status;
+        if (status === "0x1" || status === 1) {
+          return { confirmed: true, receipt };
+        } else {
+          return { confirmed: false, error: "Transaction reverted on chain" };
+        }
+      }
+
+      // Transaction not yet mined, wait and retry
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    } catch (error) {
+      console.error("Error checking transaction receipt:", error);
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+  }
+
+  return { confirmed: false, error: "Transaction confirmation timeout" };
+}
+
+/**
  * Buy/unlock a song by sending ETH to the contract
  * The contract automatically handles:
  * - 95% to artist wallet
  * - 5% to SongChainn treasury
  * - Minting ERC-1155 tokens to buyer
+ * 
+ * This function waits for blockchain confirmation before returning success
  */
 export async function buySong(
   songId: string,
   amount: number = 1,
-  priceWei: string
+  priceWei: string,
+  onStatusUpdate?: (status: string) => void
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   const onChainData = getOnChainSongData(songId);
   if (!onChainData) {
@@ -261,6 +306,7 @@ export async function buySong(
   
   try {
     // Get connected account
+    onStatusUpdate?.("Connecting wallet...");
     const accounts = await provider.request({ method: "eth_accounts" });
     if (!accounts || accounts.length === 0) {
       return { success: false, error: "No wallet connected" };
@@ -269,6 +315,7 @@ export async function buySong(
     const from = accounts[0];
     
     // Ensure on Base chain
+    onStatusUpdate?.("Switching to Base network...");
     try {
       await provider.request({
         method: "wallet_switchEthereumChain",
@@ -292,24 +339,56 @@ export async function buySong(
     // Encode buySong call
     const data = encodeFunctionCall("buySong", [onChainData.songId, amount]);
     
-    // Send transaction
+    // Prepare transaction with gas estimation
+    const txParams: any = {
+      from,
+      to: SONG_REGISTRY_ADDRESS,
+      value: `0x${BigInt(priceWei).toString(16)}`,
+      data
+    };
+
+    // Let wallet handle gas estimation - this is more reliable and handles fluctuations
+    // The wallet will use current gas prices and add appropriate buffer
+    onStatusUpdate?.("Preparing transaction...");
+    
+    // Send transaction - wallet will prompt user with gas fees
+    onStatusUpdate?.("Please confirm in your wallet...");
     const txHash = await provider.request({
       method: "eth_sendTransaction",
-      params: [{
-        from,
-        to: SONG_REGISTRY_ADDRESS,
-        value: `0x${BigInt(priceWei).toString(16)}`,
-        data
-      }]
+      params: [txParams]
     });
     
+    if (!txHash) {
+      return { success: false, error: "No transaction hash received" };
+    }
+
+    // Wait for transaction confirmation on blockchain
+    onStatusUpdate?.("Waiting for blockchain confirmation...");
+    const confirmation = await waitForTransaction(txHash, 60, 2000); // Wait up to 2 minutes
+    
+    if (!confirmation.confirmed) {
+      return { 
+        success: false, 
+        txHash,
+        error: confirmation.error || "Transaction not confirmed. Please check BaseScan." 
+      };
+    }
+
+    onStatusUpdate?.("Transaction confirmed!");
     return { success: true, txHash };
   } catch (error: any) {
     if (error?.code === 4001) {
-      return { success: false, error: "Transaction rejected" };
+      return { success: false, error: "Transaction rejected by user" };
+    }
+    if (error?.code === -32603) {
+      // Internal JSON-RPC error - often gas related
+      return { success: false, error: "Transaction failed. Please try again with sufficient ETH for gas fees." };
+    }
+    if (error?.message?.includes("insufficient funds")) {
+      return { success: false, error: "Insufficient ETH balance for transaction and gas fees" };
     }
     console.error("Error buying song:", error);
-    return { success: false, error: error?.message || "Transaction failed" };
+    return { success: false, error: error?.message || "Transaction failed. Please try again." };
   }
 }
 
