@@ -28,7 +28,7 @@ interface SongOwnership {
   isPreviewOnly: boolean;
   isLocked: boolean;
   checkOwnership: () => Promise<void>;
-  unlockSong: (ethAmount: string) => Promise<{ success: boolean; error?: string }>;
+  unlockSong: (ethAmount: string, walletAddressOverride?: string) => Promise<{ success: boolean; error?: string }>;
   recordPreviewPlay: () => void;
   recordOfflinePlay: () => number;
 }
@@ -128,13 +128,16 @@ export function useSongOwnership(songId: string): SongOwnership {
     }
   }, [userAddress, isTokenGated, checkOwnership]);
   
-  // Purchase/unlock song
-  const unlockSong = useCallback(async (ethAmount: string): Promise<{ success: boolean; error?: string }> => {
+  // Purchase/unlock song - accepts optional wallet address for freshly connected wallets
+  const unlockSong = useCallback(async (ethAmount: string, walletAddressOverride?: string): Promise<{ success: boolean; error?: string }> => {
     if (!isTokenGated) {
       return { success: false, error: 'Song is not token-gated' };
     }
     
-    if (!userAddress) {
+    // Use override address if provided (for freshly connected wallets), otherwise use context address
+    const addressToUse = walletAddressOverride || userAddress;
+    
+    if (!addressToUse) {
       return { success: false, error: 'Please connect your wallet first' };
     }
     
@@ -145,7 +148,7 @@ export function useSongOwnership(songId: string): SongOwnership {
       // Wait a moment for transaction to be indexed
       await new Promise(resolve => setTimeout(resolve, 2000));
       // Clear preview data since user now owns the song
-      clearPreviewData(songId, userAddress);
+      clearPreviewData(songId, addressToUse);
       setPreviewUsed(false);
       setPreviewTimeUsed(0);
       // Refresh balance

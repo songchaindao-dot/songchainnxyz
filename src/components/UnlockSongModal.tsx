@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight } from 'lucide-react';
+import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Song } from '@/data/musicData';
-import { formatEthPrice } from '@/lib/songRegistry';
+import { formatEthPrice, parseEthToWei } from '@/lib/songRegistry';
 import { connectWallet, hasWalletProvider, getWalletProvider } from '@/lib/baseWallet';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { toast } from 'sonner';
@@ -12,15 +12,17 @@ interface UnlockSongModalProps {
   song: Song;
   isOpen: boolean;
   onClose: () => void;
-  onUnlock: (ethAmount: string) => Promise<{ success: boolean; error?: string }>;
+  onUnlock: (ethAmount: string, walletAddress?: string) => Promise<{ success: boolean; error?: string }>;
   walletAddress?: string;
   onWalletConnected?: (address: string) => void;
 }
 
-// Default price in Wei (0.001 ETH for testing)
-const DEFAULT_PRICE_WEI = "1000000000000000";
+// Pricing options
+const UNLOCK_PRICE_ETH = "0.0001"; // ~$0.30 - streaming access only
+const BUY_PRICE_ETH = "0.0003";    // ~$1.00 - full ownership
 
-type Step = 'connect' | 'confirm' | 'signing' | 'processing' | 'success' | 'error';
+type Step = 'connect' | 'select' | 'confirm' | 'signing' | 'processing' | 'success' | 'error';
+type PurchaseType = 'unlock' | 'buy';
 
 export function UnlockSongModal({
   song,
@@ -31,20 +33,23 @@ export function UnlockSongModal({
   onWalletConnected
 }: UnlockSongModalProps) {
   const [step, setStep] = useState<Step>('connect');
+  const [purchaseType, setPurchaseType] = useState<PurchaseType>('unlock');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState(walletAddress);
   const { balance, isLoading: isBalanceLoading } = useWalletBalance(connectedAddress || null);
 
-  const priceEth = formatEthPrice(DEFAULT_PRICE_WEI);
   const hasWallet = hasWalletProvider();
   const isConnected = !!connectedAddress;
+  
+  const selectedPrice = purchaseType === 'buy' ? BUY_PRICE_ETH : UNLOCK_PRICE_ETH;
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setStep(isConnected ? 'confirm' : 'connect');
+      setStep(isConnected ? 'select' : 'connect');
       setError(null);
+      setPurchaseType('unlock');
     }
   }, [isOpen, isConnected]);
 
@@ -52,7 +57,7 @@ export function UnlockSongModal({
   useEffect(() => {
     if (walletAddress) {
       setConnectedAddress(walletAddress);
-      setStep('confirm');
+      setStep('select');
     }
   }, [walletAddress]);
 
@@ -65,7 +70,7 @@ export function UnlockSongModal({
       if (result.success && result.address) {
         setConnectedAddress(result.address);
         onWalletConnected?.(result.address);
-        setStep('confirm');
+        setStep('select');
         toast.success('Wallet connected!');
       } else {
         setError(result.error || 'Failed to connect wallet');
@@ -77,8 +82,13 @@ export function UnlockSongModal({
     }
   };
 
+  const handleSelectPurchase = (type: PurchaseType) => {
+    setPurchaseType(type);
+    setStep('confirm');
+  };
+
   const handleUnlock = async () => {
-    if (!isConnected) {
+    if (!isConnected || !connectedAddress) {
       await handleConnectWallet();
       return;
     }
@@ -91,14 +101,17 @@ export function UnlockSongModal({
       await new Promise(resolve => setTimeout(resolve, 500));
       setStep('processing');
       
-      const result = await onUnlock(priceEth);
+      // Pass the wallet address to the unlock function
+      const result = await onUnlock(selectedPrice, connectedAddress);
       
       if (result.success) {
         setStep('success');
-        toast.success('Song unlocked! You now have full access.');
+        toast.success(purchaseType === 'buy' 
+          ? 'Song purchased! You now own this track.' 
+          : 'Song unlocked! You have streaming access.');
         setTimeout(() => {
           onClose();
-          setStep('confirm');
+          setStep('select');
         }, 2500);
       } else {
         setError(result.error || 'Failed to unlock song');
@@ -115,6 +128,14 @@ export function UnlockSongModal({
     setError(null);
   };
 
+  const handleBack = () => {
+    if (step === 'confirm') {
+      setStep('select');
+    } else if (step === 'select' && !walletAddress) {
+      setStep('connect');
+    }
+  };
+
   if (!isOpen) return null;
 
   const truncateAddress = (address: string) => {
@@ -122,7 +143,7 @@ export function UnlockSongModal({
   };
 
   // Check if user has enough balance
-  const hasEnoughBalance = balance && parseFloat(balance) >= parseFloat(priceEth);
+  const hasEnoughBalance = balance && parseFloat(balance) >= parseFloat(selectedPrice);
 
   return (
     <AnimatePresence>
@@ -130,30 +151,35 @@ export function UnlockSongModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          initial={{ scale: 0.95, opacity: 0, y: 100 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          exit={{ scale: 0.95, opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-card border border-border rounded-2xl overflow-hidden"
+          className="relative w-full max-w-md bg-card border border-border rounded-t-3xl sm:rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Drag Handle (Mobile) */}
+          <div className="sm:hidden flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+
           {/* Header */}
           <div className="relative">
             <div className="absolute inset-0 gradient-primary opacity-20" />
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-background/50 hover:bg-background/80 transition-colors z-10"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 rounded-full bg-background/50 hover:bg-background/80 transition-colors z-10"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
             
-            <div className="p-6 pt-8 text-center">
+            <div className="p-4 sm:p-6 pt-2 sm:pt-8 text-center">
               <motion.div 
-                className="w-20 h-20 mx-auto mb-4 rounded-xl overflow-hidden shadow-glow"
+                className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-xl overflow-hidden shadow-glow"
                 animate={{ 
                   boxShadow: step === 'success' 
                     ? '0 0 40px rgba(34, 197, 94, 0.4)' 
@@ -168,67 +194,44 @@ export function UnlockSongModal({
                   />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <Music size={32} className="text-muted-foreground" />
+                    <Music size={28} className="text-muted-foreground" />
                   </div>
                 )}
               </motion.div>
               
-              <h2 className="text-xl font-bold mb-1">{song.title}</h2>
-              <p className="text-muted-foreground">{song.artist}</p>
+              <h2 className="text-lg sm:text-xl font-bold mb-0.5 sm:mb-1 truncate px-4">{song.title}</h2>
+              <p className="text-sm text-muted-foreground">{song.artist}</p>
             </div>
           </div>
 
           {/* Content */}
-          <div className="p-6 pt-0">
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center gap-2 mb-6">
-              {['connect', 'confirm', 'success'].map((s, i) => {
-                const stepOrder = ['connect', 'confirm', 'success'];
-                const currentIndex = stepOrder.indexOf(step === 'signing' || step === 'processing' ? 'confirm' : step === 'error' ? 'confirm' : step);
-                const stepIndex = i;
-                const isCompleted = stepIndex < currentIndex || step === 'success';
-                const isCurrent = stepIndex === currentIndex;
-                
-                return (
-                  <div key={s} className="flex items-center">
-                    <motion.div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-                        isCompleted 
-                          ? 'bg-green-500 text-white' 
-                          : isCurrent 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'bg-muted text-muted-foreground'
-                      }`}
-                      animate={{ scale: isCurrent ? 1.1 : 1 }}
-                    >
-                      {isCompleted ? <Check size={14} /> : stepIndex + 1}
-                    </motion.div>
-                    {i < 2 && (
-                      <div className={`w-8 h-0.5 mx-1 ${isCompleted ? 'bg-green-500' : 'bg-muted'}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
+          <div className="p-4 sm:p-6 pt-0">
             {/* Success State */}
             {step === 'success' && (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="text-center py-6"
+                className="text-center py-4 sm:py-6"
               >
                 <motion.div 
-                  className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center"
+                  className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-green-500/20 flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', delay: 0.1 }}
                 >
-                  <Unlock size={32} className="text-green-500" />
+                  {purchaseType === 'buy' ? (
+                    <Crown size={28} className="text-green-500" />
+                  ) : (
+                    <Unlock size={28} className="text-green-500" />
+                  )}
                 </motion.div>
-                <h3 className="text-lg font-semibold text-green-500">Song Unlocked!</h3>
+                <h3 className="text-lg font-semibold text-green-500">
+                  {purchaseType === 'buy' ? 'Song Purchased!' : 'Song Unlocked!'}
+                </h3>
                 <p className="text-muted-foreground text-sm mt-2">
-                  You now have unlimited streaming access
+                  {purchaseType === 'buy' 
+                    ? 'You now own this track with full benefits' 
+                    : 'You now have unlimited streaming access'}
                 </p>
               </motion.div>
             )}
@@ -238,16 +241,16 @@ export function UnlockSongModal({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-6"
+                className="text-center py-4 sm:py-6"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Wallet size={32} className="text-primary animate-pulse" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Wallet size={28} className="text-primary animate-pulse" />
                 </div>
                 <h3 className="text-lg font-semibold">Check Your Wallet</h3>
                 <p className="text-muted-foreground text-sm mt-2">
                   Please confirm the transaction in your wallet
                 </p>
-                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <div className="mt-3 sm:mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Loader2 size={14} className="animate-spin" />
                   Waiting for confirmation...
                 </div>
@@ -259,10 +262,10 @@ export function UnlockSongModal({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-6"
+                className="text-center py-4 sm:py-6"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Loader2 size={32} className="text-primary animate-spin" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Loader2 size={28} className="text-primary animate-spin" />
                 </div>
                 <h3 className="text-lg font-semibold">Processing Transaction</h3>
                 <p className="text-muted-foreground text-sm mt-2">
@@ -276,13 +279,13 @@ export function UnlockSongModal({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-6"
+                className="text-center py-4 sm:py-6"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <AlertCircle size={32} className="text-destructive" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
+                  <AlertCircle size={28} className="text-destructive" />
                 </div>
                 <h3 className="text-lg font-semibold text-destructive">Transaction Failed</h3>
-                <p className="text-muted-foreground text-sm mt-2">
+                <p className="text-muted-foreground text-sm mt-2 px-4">
                   {error || 'Something went wrong. Please try again.'}
                 </p>
                 <Button onClick={handleRetry} className="mt-4" variant="outline">
@@ -291,52 +294,194 @@ export function UnlockSongModal({
               </motion.div>
             )}
 
-            {/* Connect / Confirm States */}
-            {(step === 'connect' || step === 'confirm') && (
+            {/* Connect Wallet Step */}
+            {step === 'connect' && (
               <>
+                <div className="text-center mb-4 sm:mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Connect Wallet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your wallet to unlock this song
+                  </p>
+                </div>
+
+                {/* No wallet warning */}
+                {!hasWallet && (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm flex items-start gap-2">
+                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">No wallet detected</p>
+                      <p className="text-xs mt-1 text-amber-500/80">
+                        Install MetaMask or Coinbase Wallet to continue.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleConnectWallet}
+                  disabled={isConnecting || !hasWallet}
+                  className="w-full gradient-primary text-primary-foreground h-11 sm:h-12"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet size={18} className="mr-2" />
+                      Connect Wallet
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {/* Select Purchase Type Step */}
+            {step === 'select' && (
+              <>
+                {/* Wallet Info (Compact) */}
+                {isConnected && (
+                  <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Wallet size={14} className="text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">{truncateAddress(connectedAddress!)}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-primary">
+                      {isBalanceLoading ? '...' : balance ? `${balance} ETH` : '0 ETH'}
+                    </span>
+                  </div>
+                )}
+
+                <h3 className="text-base font-semibold mb-3">Choose an option</h3>
+
+                {/* Unlock Option */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleSelectPurchase('unlock')}
+                  className="w-full p-3 sm:p-4 mb-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors text-left"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <Unlock size={20} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">Unlock</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Unlimited streaming access
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg font-bold text-primary">~$0.30</div>
+                      <div className="text-xs text-muted-foreground">{UNLOCK_PRICE_ETH} ETH</div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                {/* Buy Option */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleSelectPurchase('buy')}
+                  className="w-full p-3 sm:p-4 rounded-xl border-2 border-primary/50 bg-primary/10 hover:bg-primary/20 transition-colors text-left relative overflow-hidden"
+                >
+                  <div className="absolute top-2 right-2">
+                    <span className="text-[10px] font-bold uppercase bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                      Best Value
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown size={20} className="text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">Buy & Own</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Full ownership + 1,000 offline plays
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 mt-4">
+                      <div className="text-lg font-bold text-primary">~$1.00</div>
+                      <div className="text-xs text-muted-foreground">{BUY_PRICE_ETH} ETH</div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                <p className="text-xs text-center text-muted-foreground mt-4">
+                  95% goes directly to the artist • Base blockchain
+                </p>
+              </>
+            )}
+
+            {/* Confirm Step */}
+            {step === 'confirm' && (
+              <>
+                {/* Back button */}
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"
+                >
+                  <ArrowRight size={14} className="rotate-180" />
+                  Back
+                </button>
+
                 {/* Wallet Info */}
                 {isConnected && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-muted/30 rounded-xl p-4 mb-4"
+                    className="bg-muted/30 rounded-xl p-3 mb-4"
                   >
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Wallet size={16} className="text-primary" />
+                        <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Wallet size={14} className="text-primary" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">{truncateAddress(connectedAddress!)}</p>
-                          <p className="text-xs text-muted-foreground">Connected Wallet</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-primary">
                           {isBalanceLoading ? '...' : balance ? `${balance} ETH` : '0 ETH'}
                         </p>
-                        <p className="text-xs text-muted-foreground">Balance</p>
                       </div>
                     </div>
 
                     {/* Insufficient balance warning */}
                     {!isBalanceLoading && balance && !hasEnoughBalance && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 text-amber-500 text-xs">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 text-amber-500 text-xs mt-2">
                         <AlertCircle size={14} />
-                        <span>Insufficient balance. You need at least {priceEth} ETH.</span>
+                        <span>Insufficient balance. Need {selectedPrice} ETH.</span>
                       </div>
                     )}
                   </motion.div>
                 )}
 
-                {/* Token Info */}
-                <div className="bg-muted/30 rounded-xl p-4 mb-4">
+                {/* Selected Option Summary */}
+                <div className="bg-muted/30 rounded-xl p-3 sm:p-4 mb-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-muted-foreground">Price</span>
-                    <span className="text-lg font-bold text-primary">{priceEth} ETH</span>
+                    <div className="flex items-center gap-2">
+                      {purchaseType === 'buy' ? (
+                        <Crown size={18} className="text-primary" />
+                      ) : (
+                        <Unlock size={18} className="text-amber-500" />
+                      )}
+                      <span className="font-semibold">
+                        {purchaseType === 'buy' ? 'Buy & Own' : 'Unlock'}
+                      </span>
+                    </div>
+                    <span className="text-lg font-bold text-primary">{selectedPrice} ETH</span>
                   </div>
                   
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Network</span>
                       <span className="font-medium">Base</span>
@@ -349,76 +494,64 @@ export function UnlockSongModal({
                 </div>
 
                 {/* What you get */}
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2 mb-4 sm:mb-6">
                   <h4 className="text-sm font-medium">What you get:</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1.5">
-                    {[
-                      'Unlimited streaming access',
-                      '1,000 offline plays',
-                      'Support the artist directly',
-                      'Own the song token on Base'
-                    ].map((item, i) => (
-                      <motion.li 
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        {item}
-                      </motion.li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* No wallet warning */}
-                {!hasWallet && step === 'connect' && (
-                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm flex items-start gap-2">
-                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">No wallet detected</p>
-                      <p className="text-xs mt-1 text-amber-500/80">
-                        Install MetaMask, Coinbase Wallet, or another Web3 wallet to continue.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                {!isConnected ? (
-                  <Button
-                    onClick={handleConnectWallet}
-                    disabled={isConnecting || !hasWallet}
-                    className="w-full gradient-primary text-primary-foreground h-12"
-                  >
-                    {isConnecting ? (
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {purchaseType === 'buy' ? (
                       <>
-                        <Loader2 size={18} className="mr-2 animate-spin" />
-                        Connecting...
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Unlimited streaming access
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          1,000 offline plays
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Own the song token on Base
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Support the artist directly
+                        </li>
                       </>
                     ) : (
                       <>
-                        <Wallet size={18} className="mr-2" />
-                        Connect Wallet
-                        <ArrowRight size={16} className="ml-2" />
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Unlimited streaming access
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Support the artist directly
+                        </li>
                       </>
                     )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleUnlock}
-                    disabled={!hasEnoughBalance && !isBalanceLoading}
-                    className="w-full gradient-primary text-primary-foreground h-12"
-                  >
-                    <Lock size={18} className="mr-2" />
-                    Unlock for {priceEth} ETH
-                    <ArrowRight size={16} className="ml-2" />
-                  </Button>
-                )}
+                  </ul>
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  onClick={handleUnlock}
+                  disabled={!hasEnoughBalance && !isBalanceLoading}
+                  className="w-full gradient-primary text-primary-foreground h-11 sm:h-12"
+                >
+                  {purchaseType === 'buy' ? (
+                    <>
+                      <Crown size={18} className="mr-2" />
+                      Buy for {selectedPrice} ETH
+                    </>
+                  ) : (
+                    <>
+                      <Unlock size={18} className="mr-2" />
+                      Unlock for {selectedPrice} ETH
+                    </>
+                  )}
+                </Button>
 
                 <p className="text-xs text-center text-muted-foreground mt-3">
-                  Payment processed on Base blockchain • Gas fees apply
+                  Gas fees apply • Powered by Base
                 </p>
               </>
             )}
