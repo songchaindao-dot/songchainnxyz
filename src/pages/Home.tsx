@@ -338,10 +338,6 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                   <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted" />
-                  <span className="text-muted-foreground">Ownership (Coming Soon)</span>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
-                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted" />
                   <span className="text-muted-foreground">Rewards (Coming Soon)</span>
                 </div>
               </div>
