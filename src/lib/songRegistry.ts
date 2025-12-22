@@ -5,15 +5,13 @@
  * Contract address: 0x39e8317fEEBE3129f3d876c1F6D35271849797F9
  */
 
+import { getWalletProvider, switchToBaseChain, BASE_CHAIN_ID_HEX } from './baseWallet';
+
 // Contract address on Base mainnet
 export const SONG_REGISTRY_ADDRESS = "0x39e8317fEEBE3129f3d876c1F6D35271849797F9";
 
-// Base chain configuration
-export const BASE_CHAIN_ID = 8453;
-export const BASE_CHAIN_ID_HEX = "0x2105";
-
-// SongChainn protocol treasury (receives 5% of purchases)
-export const SONGCHAINN_TREASURY = "0x0000000000000000000000000000000000000000"; // To be set
+// Re-export for convenience
+export { BASE_CHAIN_ID_HEX as BASE_CHAIN_ID };
 
 // Minimal ABI for SongRegistry ERC-1155 contract
 export const SONG_REGISTRY_ABI = [
@@ -137,33 +135,9 @@ export function markPreviewUsed(songId: string, userAddress?: string): void {
 }
 
 /**
- * Get the Base provider for contract calls
- */
-function getBaseProvider(): any | null {
-  if (typeof window === "undefined") return null;
-  const ethereum = (window as any).ethereum;
-  if (!ethereum?.request) return null;
-  
-  // Handle multi-provider injection
-  if (Array.isArray(ethereum.providers)) {
-    const baseProvider = ethereum.providers.find(
-      (p: any) => p?.isBaseApp || p?.isCoinbaseWallet
-    );
-    if (baseProvider) return baseProvider;
-  }
-  
-  if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) {
-    return ethereum;
-  }
-  
-  return ethereum;
-}
-
-/**
  * Encode function call data for contract interaction
  */
 function encodeFunctionCall(functionName: string, params: any[]): string {
-  // Simple ABI encoding for our use cases
   if (functionName === "balanceOf") {
     const [account, id] = params;
     const selector = "00fdd58e"; // keccak256("balanceOf(address,uint256)").slice(0,8)
@@ -174,7 +148,7 @@ function encodeFunctionCall(functionName: string, params: any[]): string {
   
   if (functionName === "buySong") {
     const [songId, amount] = params;
-    const selector = "d96a094a"; // This is a placeholder - actual selector depends on contract
+    const selector = "d96a094a"; // Placeholder - actual selector depends on contract
     const songIdPadded = BigInt(songId).toString(16).padStart(64, "0");
     const amountPadded = BigInt(amount).toString(16).padStart(64, "0");
     return `0x${selector}${songIdPadded}${amountPadded}`;
@@ -190,7 +164,7 @@ export async function checkSongBalance(userAddress: string, songId: string): Pro
   const onChainData = getOnChainSongData(songId);
   if (!onChainData) return BigInt(0);
   
-  const provider = getBaseProvider();
+  const provider = getWalletProvider();
   if (!provider) {
     console.warn("No wallet provider available for balance check");
     return BigInt(0);
@@ -234,9 +208,9 @@ export async function buySong(
     return { success: false, error: "Song not found on-chain" };
   }
   
-  const provider = getBaseProvider();
+  const provider = getWalletProvider();
   if (!provider) {
-    return { success: false, error: "No wallet connected" };
+    return { success: false, error: "No wallet connected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet." };
   }
   
   try {

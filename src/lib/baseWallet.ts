@@ -1,104 +1,44 @@
 /**
  * Base Wallet Connection Utilities
  * 
- * This module handles the connection to Base App wallets using the
- * wallet_connect method with SIWE (Sign In With Ethereum) support.
+ * Supports any EIP-1193 compatible wallet (MetaMask, Coinbase, Rainbow, etc.)
+ * for connecting to Base blockchain and signing transactions.
  */
 
 // Base Mainnet chain ID
-export const BASE_CHAIN_ID = "0x2105"; // 8453 in hex
+export const BASE_CHAIN_ID = 8453;
+export const BASE_CHAIN_ID_HEX = "0x2105";
 
-interface BaseProvider {
+interface EIP1193Provider {
   request: (args: { method: string; params?: any[] }) => Promise<any>;
-}
-
-interface SIWEResult {
-  address: string;
-  message: string;
-  signature: string;
+  on?: (event: string, callback: (...args: any[]) => void) => void;
+  removeListener?: (event: string, callback: (...args: any[]) => void) => void;
 }
 
 interface ConnectResult {
   success: boolean;
   address?: string;
-  message?: string;
-  signature?: string;
+  chainId?: number;
   error?: string;
 }
 
 /**
- * Detect if we're running inside the Coinbase/Base in-app browser.
- * Useful as a fallback when injected provider flags aren't present.
+ * Check if any wallet provider is available
  */
-export function isCoinbaseInAppBrowser(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  return /CoinbaseWallet|BaseApp/i.test(ua);
-}
-
-/**
- * Basic injected provider presence check.
- */
-export function hasInjectedEthereum(): boolean {
+export function hasWalletProvider(): boolean {
   if (typeof window === "undefined") return false;
   const ethereum = (window as any).ethereum;
   return !!ethereum?.request;
 }
 
 /**
- * Check if Base App wallet environment is available.
+ * Get the injected Ethereum provider (any wallet)
  */
-export function isBaseAppAvailable(): boolean {
-  if (!hasInjectedEthereum()) return false;
-
+export function getWalletProvider(): EIP1193Provider | null {
+  if (typeof window === "undefined") return null;
   const ethereum = (window as any).ethereum;
-
-  // Direct flags (most common)
-  if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) return true;
-
-  // Multi-provider injection (e.g., multiple wallets installed)
-  if (Array.isArray(ethereum.providers)) {
-    if (ethereum.providers.some((p: any) => p?.isBaseApp || p?.isCoinbaseWallet)) return true;
-  }
-
-  // Fallback: in-app browser sometimes doesn't expose flags consistently
-  return isCoinbaseInAppBrowser();
-}
-
-/**
- * Get the Base App provider - ONLY returns Base/Coinbase wallet, never MetaMask or others
- */
-function getBaseProvider(): BaseProvider | null {
-  if (!hasInjectedEthereum()) return null;
-
-  const ethereum = (window as any).ethereum;
-  const isProvider = (p: any) => p && typeof p.request === "function";
-  const isBaseOrCoinbase = (p: any) => p?.isBaseApp || p?.isCoinbaseWallet;
-
-  // If multiple wallets are injected, ONLY use Base/Coinbase provider
-  if (Array.isArray(ethereum.providers)) {
-    const baseProvider = ethereum.providers.find(
-      (p: any) => isBaseOrCoinbase(p) && isProvider(p)
-    );
-    if (baseProvider) return baseProvider as BaseProvider;
-
-    // If we're in Coinbase/Base in-app browser, the provider should work
-    if (isCoinbaseInAppBrowser()) {
-      const first = ethereum.providers.find((p: any) => isProvider(p));
-      if (first) return first as BaseProvider;
-    }
-    
-    // No Base wallet found in providers array
-    return null;
-  }
-
-  // Single provider - only use if it's Base/Coinbase or we're in Base browser
-  if (isBaseOrCoinbase(ethereum) || isCoinbaseInAppBrowser()) {
-    return isProvider(ethereum) ? (ethereum as BaseProvider) : null;
-  }
-
-  // Not Base wallet (could be MetaMask etc.) - reject
-  return null;
+  if (!ethereum?.request) return null;
+  return ethereum as EIP1193Provider;
 }
 
 /**
@@ -109,206 +49,194 @@ export function generateNonce(): string {
 }
 
 /**
- * Create a SIWE message for signing
+ * Switch to Base chain, adding it if necessary
  */
-export function createSIWEMessage(
-  address: string,
-  nonce: string,
-  domain: string = window.location.host,
-  uri: string = window.location.origin
-): string {
-  const issuedAt = new Date().toISOString();
-  
-  return `${domain} wants you to sign in with your Ethereum account:
-${address}
-
-Sign in to $ongChainn with your Base wallet.
-
-URI: ${uri}
-Version: 1
-Chain ID: 8453
-Nonce: ${nonce}
-Issued At: ${issuedAt}`;
-}
-
-/**
- * Try the new Base App wallet_connect method with SIWE capabilities
- * This is the preferred method for the new Base App (2024/2025)
- */
-async function tryWalletConnect(provider: BaseProvider, nonce: string): Promise<ConnectResult | null> {
-  try {
-    const result = await provider.request({
-      method: "wallet_connect",
-      params: [{
-        version: "1",
-        capabilities: {
-          signInWithEthereum: {
-            nonce,
-            chainId: BASE_CHAIN_ID
-          }
-        }
-      }]
-    });
-
-    // New Base App returns accounts array with capabilities
-    if (result?.accounts && result.accounts.length > 0) {
-      const account = result.accounts[0];
-      const address = account.address;
-      const siweResult = account.capabilities?.signInWithEthereum;
-      
-      if (siweResult?.message && siweResult?.signature) {
-        return {
-          success: true,
-          address,
-          message: siweResult.message,
-          signature: siweResult.signature,
-        };
-      }
-    }
-    
-    return null;
-  } catch (error: any) {
-    // wallet_connect not supported, return null to try legacy flow
-    console.log("wallet_connect not available, trying legacy flow");
-    return null;
-  }
-}
-
-/**
- * Legacy connection flow using eth_requestAccounts + personal_sign
- * Used for older Coinbase Wallet / Base Wallet versions
- */
-async function tryLegacyConnect(provider: BaseProvider, nonce: string): Promise<ConnectResult> {
-  // Request accounts first (permission-gated in most wallets)
-  const accounts = await provider.request({
-    method: "eth_requestAccounts",
-    params: [],
-  });
-
-  if (!accounts || accounts.length === 0) {
-    return {
-      success: false,
-      error: "No accounts returned from wallet",
-    };
-  }
-
-  const address = accounts[0];
-
-  // Best-effort: switch to Base chain after permissions are granted
+export async function switchToBaseChain(provider: EIP1193Provider): Promise<boolean> {
   try {
     await provider.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: BASE_CHAIN_ID }],
+      params: [{ chainId: BASE_CHAIN_ID_HEX }],
     });
+    return true;
   } catch (switchError: any) {
     // Chain not added, try to add it
     if (switchError?.code === 4902) {
-      await provider.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: BASE_CHAIN_ID,
-            chainName: "Base",
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-            rpcUrls: ["https://mainnet.base.org"],
-            blockExplorerUrls: ["https://basescan.org"],
-          },
-        ],
-      });
+      try {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: BASE_CHAIN_ID_HEX,
+              chainName: "Base",
+              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://mainnet.base.org"],
+              blockExplorerUrls: ["https://basescan.org"],
+            },
+          ],
+        });
+        return true;
+      } catch (addError) {
+        console.error("Failed to add Base chain:", addError);
+        return false;
+      }
     }
-    // Otherwise ignore: signing can still proceed in many wallet contexts.
+    // User rejected or other error - still try to proceed
+    console.warn("Chain switch warning:", switchError);
+    return true;
   }
-
-  // Create SIWE message with proper format
-  const message = createSIWEMessage(address, nonce);
-
-  // Sign the message
-  let signature: string;
-  try {
-    // Most widely supported
-    signature = await provider.request({
-      method: "personal_sign",
-      params: [message, address],
-    });
-  } catch (signError: any) {
-    // Fallback used by some providers
-    signature = await provider.request({
-      method: "eth_sign",
-      params: [address, message],
-    });
-  }
-
-  return {
-    success: true,
-    address,
-    message,
-    signature,
-  };
 }
 
 /**
- * Connect to Base App wallet with SIWE authentication
- * Supports both new Base App (wallet_connect) and legacy Coinbase Wallet (personal_sign)
+ * Connect to any Base-compatible wallet
+ * Works with MetaMask, Coinbase Wallet, Rainbow, and any EIP-1193 wallet
  */
-export async function connectWithBaseApp(nonce: string): Promise<ConnectResult> {
-  const provider = getBaseProvider();
+export async function connectWallet(): Promise<ConnectResult> {
+  const provider = getWalletProvider();
   
   if (!provider) {
     return {
       success: false,
-      error: "Base App not detected. Please install Base App to continue.",
+      error: "No wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.",
     };
   }
 
   try {
-    // First, try the new Base App wallet_connect method
-    const walletConnectResult = await tryWalletConnect(provider, nonce);
-    if (walletConnectResult) {
-      return walletConnectResult;
+    // Request account access
+    const accounts = await provider.request({
+      method: "eth_requestAccounts",
+      params: [],
+    });
+
+    if (!accounts || accounts.length === 0) {
+      return {
+        success: false,
+        error: "No accounts returned from wallet",
+      };
     }
 
-    // Fall back to legacy flow for older wallets
-    return await tryLegacyConnect(provider, nonce);
+    const address = accounts[0];
+
+    // Switch to Base chain
+    await switchToBaseChain(provider);
+
+    // Get current chain ID
+    const chainIdHex = await provider.request({ method: "eth_chainId" });
+    const chainId = parseInt(chainIdHex, 16);
+
+    return {
+      success: true,
+      address,
+      chainId,
+    };
   } catch (error: any) {
-    // EIP-1193 user rejected request
+    // User rejected request
     if (error?.code === 4001) {
-      return { success: false, error: "Signature request was rejected in wallet." };
+      return { success: false, error: "Connection request was rejected" };
     }
 
-    console.error("Base App connection error:", error);
+    console.error("Wallet connection error:", error);
     return {
       success: false,
-      error: error?.message || "Failed to connect to Base App",
+      error: error?.message || "Failed to connect wallet",
     };
   }
 }
 
 /**
- * Simulate Base App connection for Phase One
- * This generates a valid wallet address and simulated signature
- * to be replaced with real wallet connection in production
+ * Get connected accounts without prompting
  */
-export async function simulateBaseConnection(nonce: string): Promise<ConnectResult> {
-  // Generate a deterministic wallet address for this session
-  const randomBytes = new Uint8Array(20);
-  crypto.getRandomValues(randomBytes);
-  const address = `0x${Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-  
-  // Create SIWE message
-  const message = createSIWEMessage(address, nonce);
-  
-  // Generate simulated signature (65 bytes hex)
-  const sigBytes = new Uint8Array(65);
-  crypto.getRandomValues(sigBytes);
-  const signature = `0x${Array.from(sigBytes).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return {
-    success: true,
-    address,
-    message,
-    signature,
-  };
+export async function getConnectedAccounts(): Promise<string[]> {
+  const provider = getWalletProvider();
+  if (!provider) return [];
+
+  try {
+    const accounts = await provider.request({
+      method: "eth_accounts",
+      params: [],
+    });
+    return accounts || [];
+  } catch {
+    return [];
+  }
 }
+
+/**
+ * Check if wallet is connected
+ */
+export async function isWalletConnected(): Promise<boolean> {
+  const accounts = await getConnectedAccounts();
+  return accounts.length > 0;
+}
+
+/**
+ * Sign a message with the connected wallet
+ */
+export async function signMessage(message: string, address: string): Promise<{ signature?: string; error?: string }> {
+  const provider = getWalletProvider();
+  if (!provider) {
+    return { error: "No wallet provider" };
+  }
+
+  try {
+    const signature = await provider.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+    return { signature };
+  } catch (error: any) {
+    if (error?.code === 4001) {
+      return { error: "Signature request was rejected" };
+    }
+    return { error: error?.message || "Failed to sign message" };
+  }
+}
+
+/**
+ * Send a transaction
+ */
+export async function sendTransaction(params: {
+  from: string;
+  to: string;
+  value: string;
+  data?: string;
+}): Promise<{ txHash?: string; error?: string }> {
+  const provider = getWalletProvider();
+  if (!provider) {
+    return { error: "No wallet provider" };
+  }
+
+  try {
+    // Ensure we're on Base
+    await switchToBaseChain(provider);
+
+    const txHash = await provider.request({
+      method: "eth_sendTransaction",
+      params: [{
+        from: params.from,
+        to: params.to,
+        value: params.value,
+        data: params.data || "0x",
+      }],
+    });
+
+    return { txHash };
+  } catch (error: any) {
+    if (error?.code === 4001) {
+      return { error: "Transaction was rejected" };
+    }
+    return { error: error?.message || "Transaction failed" };
+  }
+}
+
+// Legacy exports for backward compatibility
+export const isBaseAppAvailable = hasWalletProvider;
+export const connectWithBaseApp = async (_nonce: string) => {
+  const result = await connectWallet();
+  return {
+    success: result.success,
+    address: result.address,
+    error: result.error,
+    message: undefined,
+    signature: undefined,
+  };
+};

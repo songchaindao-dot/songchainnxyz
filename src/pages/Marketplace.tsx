@@ -23,10 +23,8 @@ import { UnlockSongModal } from '@/components/UnlockSongModal';
 import { OwnershipBadge } from '@/components/OwnershipBadge';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useAuth } from '@/context/AuthContext';
-import { isBaseAppAvailable, connectWithBaseApp, generateNonce } from '@/lib/baseWallet';
 import { SONG_REGISTRY_ADDRESS } from '@/lib/songRegistry';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 // Component for individual marketplace song card
 function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
@@ -34,7 +32,7 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   const { playSong, togglePlay } = usePlayerActions();
   const { user } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [isConnected, setIsConnected] = useState(!!user?.user_metadata?.wallet_address);
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(user?.user_metadata?.wallet_address);
   
   const {
     status: ownershipStatus,
@@ -45,28 +43,7 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
     balance
   } = useSongOwnership(song.id);
   
-  const artist = ARTISTS.find(a => a.id === song.artistId);
   const isCurrentSong = currentSong?.id === song.id;
-  
-  const handleConnectWallet = async () => {
-    if (!isBaseAppAvailable()) {
-      toast.error('Please install Base App to unlock songs');
-      return;
-    }
-    
-    try {
-      const nonce = generateNonce();
-      const result = await connectWithBaseApp(nonce);
-      if (result.success && result.address) {
-        setIsConnected(true);
-        toast.success('Wallet connected!');
-      } else {
-        toast.error(result.error || 'Failed to connect wallet');
-      }
-    } catch (error) {
-      toast.error('Failed to connect wallet');
-    }
-  };
   
   const handlePlay = () => {
     if (!canPlay) {
@@ -251,8 +228,8 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
           isOpen={showUnlockModal}
           onClose={() => setShowUnlockModal(false)}
           onUnlock={unlockSong}
-          isConnected={isConnected}
-          onConnectWallet={handleConnectWallet}
+          walletAddress={walletAddress}
+          onWalletConnected={setWalletAddress}
         />
       )}
     </>

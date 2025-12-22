@@ -192,42 +192,84 @@ export default function Home() {
               </div>
             </motion.section>
 
-            {/* Marketplace CTA */}
+            {/* Marketplace CTA - Featured Ad Style */}
             <motion.section variants={itemVariants}>
-              <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 shine-overlay relative overflow-hidden border border-primary/20">
-                <div className="absolute top-0 right-0 w-40 h-40 opacity-30">
-                  <motion.div
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: 'radial-gradient(circle, hsl(var(--primary) / 0.8) 0%, transparent 70%)',
-                      filter: 'blur(40px)',
-                    }}
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                </div>
-                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="p-2.5 sm:p-3 rounded-xl gradient-primary shadow-glow-intense flex-shrink-0">
-                      <Coins className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-heading font-semibold text-foreground text-base sm:text-lg mb-1">
-                        Music Marketplace
-                      </h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
-                        Own songs on-chain. Unlock unlimited streaming, offline plays, and support artists directly.
-                      </p>
+              <Link to="/marketplace" className="block group">
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-primary/40 hover:border-primary/60 transition-all duration-300">
+                  {/* Animated gradient background */}
+                  <div className="absolute inset-0 gradient-primary opacity-10 group-hover:opacity-20 transition-opacity" />
+                  <div className="absolute top-0 right-0 w-64 h-64 opacity-40">
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle, hsl(var(--primary) / 0.8) 0%, transparent 70%)',
+                        filter: 'blur(60px)',
+                      }}
+                      animate={{ 
+                        scale: [1, 1.4, 1],
+                        x: [0, 20, 0],
+                        y: [0, -10, 0]
+                      }}
+                      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  </div>
+                  <div className="absolute bottom-0 left-0 w-40 h-40 opacity-30">
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle, hsl(217 91% 60% / 0.6) 0%, transparent 70%)',
+                        filter: 'blur(40px)',
+                      }}
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                      }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                    />
+                  </div>
+                  
+                  {/* Badge */}
+                  <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                    <span className="px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-full bg-primary text-primary-foreground animate-pulse">
+                      NEW
+                    </span>
+                  </div>
+                  
+                  <div className="relative z-10 p-5 sm:p-8">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                      {/* Icon */}
+                      <div className="p-3 sm:p-4 rounded-2xl gradient-primary shadow-glow-intense flex-shrink-0">
+                        <Coins className="w-7 h-7 sm:w-10 sm:h-10 text-primary-foreground" />
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1">
+                        <h3 className="font-heading font-bold text-foreground text-lg sm:text-2xl mb-1 sm:mb-2 flex items-center gap-2">
+                          Music Marketplace
+                          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary group-hover:translate-x-1 transition-transform" />
+                        </h3>
+                        <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 max-w-lg">
+                          Own songs on-chain with any Base wallet. Unlock unlimited streaming, 
+                          1,000 offline plays, and support artists directly with 95% going to creators.
+                        </p>
+                        
+                        {/* Stats */}
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs sm:text-sm font-medium">
+                            <Music className="w-3.5 h-3.5" />
+                            <span>On-Chain Songs</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 text-green-500 text-xs sm:text-sm font-medium">
+                            <span>95% to Artists</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 text-xs sm:text-sm font-medium">
+                            <span>Base Blockchain</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <Link to="/marketplace" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto gradient-primary text-primary-foreground shadow-glow gap-2">
-                      <span>Explore</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
                 </div>
-              </div>
+              </Link>
             </motion.section>
 
             {/* Discover Community Section */}
