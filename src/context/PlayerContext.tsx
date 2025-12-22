@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
-import { isOnChainSong, hasUsedPreview, markPreviewUsed } from '@/lib/songRegistry';
+import { isOnChainSong, hasUsedPreview, markPreviewUsed, addPreviewTime, getPreviewThreshold } from '@/lib/songRegistry';
 import { toast } from 'sonner';
 
 // Split context for better performance - components only re-render for what they need
@@ -51,9 +51,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playNextRef = useRef<() => void>(() => {});
   const crossfadeTriggeredRef = useRef(false);
   const previewUserRef = useRef<string | undefined>(undefined);
+  const previewTimeTrackingRef = useRef<{ lastTime: number; accumulated: number }>({ lastTime: 0, accumulated: 0 });
   const crossfadeDuration = 2000; // 2 second crossfade
   const crossfadeThreshold = 2; // Start crossfade 2 seconds before song ends
 
+  // Initialize audio elements - runs once on mount
   useEffect(() => {
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
@@ -62,10 +64,51 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
-    // Check for crossfade trigger point (2 seconds before end)
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+      // Reset crossfade trigger when new song loads
+      crossfadeTriggeredRef.current = false;
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.pause();
+      nextAudioRef.current?.pause();
+    };
+  }, []);
+
+  // Handle time updates with preview tracking - updates when state changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     const handleTimeUpdate = () => {
-      const now = Date.now();
       setCurrentTime(audio.currentTime);
+      
+      // Track preview playback time and enforce 5-second limit
+      if (isPreviewMode && currentSong) {
+        const elapsed = audio.currentTime - previewTimeTrackingRef.current.lastTime;
+        if (elapsed > 0 && elapsed < 2) { // Sanity check for reasonable time increment
+          previewTimeTrackingRef.current.accumulated += elapsed;
+          
+          // Check if 5-second threshold reached
+          const thresholdReached = addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
+          if (thresholdReached) {
+            // Immediately stop and lock
+            audio.pause();
+            setBlockedSongId(currentSong.id);
+            setIsPreviewMode(false);
+            setIsPlaying(false);
+            toast.error('Preview limit reached - unlock to continue listening', {
+              duration: 5000,
+            });
+            return;
+          }
+        }
+        previewTimeTrackingRef.current.lastTime = audio.currentTime;
+      }
       
       // Trigger crossfade when approaching end of song
       const timeRemaining = audio.duration - audio.currentTime;
@@ -80,52 +123,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      // Reset crossfade trigger when new song loads
-      crossfadeTriggeredRef.current = false;
-    };
-
-    const handleEnded = () => {
-      // If this was a preview, lock the song
-      if (isPreviewMode && currentSong) {
-        markPreviewUsed(currentSong.id, previewUserRef.current);
-        setBlockedSongId(currentSong.id);
-        setIsPreviewMode(false);
-        setIsPlaying(false);
-        toast.error('Preview ended - unlock to continue listening', {
-          duration: 5000,
-          action: {
-            label: 'Unlock',
-            onClick: () => {
-              // User will need to click the song to open unlock modal
-            }
-          }
-        });
-        return;
-      }
-      
-      // Only trigger if crossfade wasn't already started
-      if (!crossfadeTriggeredRef.current) {
-        playNextRef.current();
-      }
-      crossfadeTriggeredRef.current = false;
-    };
-
     audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
-      audio.pause();
-      nextAudioRef.current?.pause();
     };
-  }, []);
+  }, [isPreviewMode, currentSong]);
 
-  // Update preview mode ended handler when state changes
+  // Handle song ended with preview locking
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -150,9 +154,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       crossfadeTriggeredRef.current = false;
     };
 
-    audio.removeEventListener('ended', handleEnded);
     audio.addEventListener('ended', handleEnded);
-
     return () => {
       audio.removeEventListener('ended', handleEnded);
     };
@@ -207,6 +209,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playSong = useCallback((song: Song, options?: { userAddress?: string; hasOwnership?: boolean }) => {
     const { userAddress, hasOwnership } = options || {};
     
+    // Reset preview time tracking
+    previewTimeTrackingRef.current = { lastTime: 0, accumulated: 0 };
+    
     // Check if song is token-gated
     if (song.isTokenGated && isOnChainSong(song.id)) {
       // If user has ownership, play normally
@@ -214,20 +219,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setIsPreviewMode(false);
         setBlockedSongId(null);
       } else {
-        // Check if preview was already used
+        // Check if preview was already used (threshold exceeded)
         if (hasUsedPreview(song.id, userAddress)) {
-          // Block playback - preview already used
+          // Block playback - preview already exhausted
           setBlockedSongId(song.id);
           toast.error('Preview already used - unlock to listen', {
             duration: 4000,
           });
-          return; // Don't play
+          return; // Don't play at all
         }
         
-        // Allow preview - first time playing
+        // Allow preview - still has remaining preview time
         setIsPreviewMode(true);
         previewUserRef.current = userAddress;
-        toast.info('Playing preview - this is your one free listen', {
+        const threshold = getPreviewThreshold();
+        toast.info(`Playing preview - locks after ${threshold} seconds`, {
           duration: 5000,
         });
       }
