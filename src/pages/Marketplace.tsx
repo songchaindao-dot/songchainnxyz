@@ -12,13 +12,15 @@ import {
   Wallet,
   TrendingUp,
   Music,
-  Shield
+  Shield,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SONGS, ARTISTS } from '@/data/musicData';
 import { useSongOwnership } from '@/hooks/useSongOwnership';
+import { useSongPopularity } from '@/hooks/usePopularity';
 import { UnlockSongModal } from '@/components/UnlockSongModal';
 import { OwnershipBadge } from '@/components/OwnershipBadge';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
@@ -34,10 +36,15 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | undefined>(user?.user_metadata?.wallet_address);
   
+  // Get real-time popularity data
+  const { data: popularityData } = useSongPopularity();
+  
   const {
     status: ownershipStatus,
     canPlay,
+    isLocked,
     offlinePlaysRemaining,
+    previewSecondsRemaining,
     unlockSong,
     isLoading,
     balance
@@ -45,8 +52,20 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   
   const isCurrentSong = currentSong?.id === song.id;
   
+  // Get real stats from database
+  const realStats = useMemo(() => {
+    const songData = popularityData?.find(p => p.song_id === song.id);
+    return {
+      plays: songData?.play_count || 0,
+      likes: songData?.like_count || 0,
+      comments: songData?.comment_count || 0,
+      shares: songData?.share_count || 0
+    };
+  }, [popularityData, song.id]);
+  
   const handlePlay = () => {
-    if (!canPlay) {
+    // Check if song is locked (preview exhausted)
+    if (isLocked) {
       setShowUnlockModal(true);
       return;
     }
@@ -62,7 +81,7 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   
   const statusConfig = {
     free: { label: 'Free', color: 'bg-green-500/20 text-green-400', icon: Unlock },
-    preview: { label: 'Preview Available', color: 'bg-amber-500/20 text-amber-400', icon: Play },
+    preview: { label: `${previewSecondsRemaining}s Preview`, color: 'bg-amber-500/20 text-amber-400', icon: Play },
     preview_used: { label: 'Locked', color: 'bg-destructive/20 text-destructive', icon: Lock },
     owned: { label: 'Owned', color: 'bg-primary/20 text-primary', icon: Unlock },
     offline_ready: { label: 'Offline Ready', color: 'bg-cyan-500/20 text-cyan-400', icon: Shield }
@@ -117,13 +136,13 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
             onClick={handlePlay}
             className={cn(
               "absolute bottom-4 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-glow transition-all",
-              canPlay 
-                ? "gradient-primary" 
-                : "bg-muted"
+              isLocked 
+                ? "bg-destructive/20" 
+                : "gradient-primary"
             )}
           >
-            {!canPlay ? (
-              <Lock className="w-6 h-6 text-muted-foreground" />
+            {isLocked ? (
+              <Lock className="w-6 h-6 text-destructive" />
             ) : isCurrentSong && isPlaying ? (
               <Pause className="w-6 h-6 text-primary-foreground" />
             ) : (
@@ -146,15 +165,15 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
             </Link>
           </div>
           
-          {/* Stats */}
+          {/* Real Stats from Database */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Play size={12} />
-              {song.plays.toLocaleString()} plays
+              {realStats.plays.toLocaleString()} plays
             </span>
             <span className="flex items-center gap-1">
-              <TrendingUp size={12} />
-              {song.genre}
+              <Heart size={12} />
+              {realStats.likes.toLocaleString()} likes
             </span>
           </div>
           
