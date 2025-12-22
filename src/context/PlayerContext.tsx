@@ -52,6 +52,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const crossfadeTriggeredRef = useRef(false);
   const previewUserRef = useRef<string | undefined>(undefined);
   const previewTimeTrackingRef = useRef<{ lastTime: number; accumulated: number }>({ lastTime: 0, accumulated: 0 });
+  const previewNotifiedRef = useRef(false); // Track if we've already shown the "preview counted" toast
   const crossfadeDuration = 2000; // 2 second crossfade
   const crossfadeThreshold = 2; // Start crossfade 2 seconds before song ends
 
@@ -93,10 +94,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (elapsed > 0 && elapsed < 2) { // Sanity check for reasonable time increment
           // Check if 5-second threshold reached - just mark as used, don't stop
           const thresholdReached = addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
-          if (thresholdReached) {
-            // Preview is now used up - will be blocked on next play attempt
-            // But allow current playback to continue
-            toast.info('Preview counted - song will require unlock after this play', {
+          if (thresholdReached && !previewNotifiedRef.current) {
+            // Show notification only once per session
+            previewNotifiedRef.current = true;
+            toast.info('Preview counted - unlock required for next play', {
               duration: 3000,
             });
           }
@@ -203,8 +204,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playSong = useCallback((song: Song, options?: { userAddress?: string; hasOwnership?: boolean }) => {
     const { userAddress, hasOwnership } = options || {};
     
-    // Reset preview time tracking
+    // Reset preview tracking for new song
     previewTimeTrackingRef.current = { lastTime: 0, accumulated: 0 };
+    previewNotifiedRef.current = false;
     
     // Check if song is token-gated
     if (song.isTokenGated && isOnChainSong(song.id)) {
