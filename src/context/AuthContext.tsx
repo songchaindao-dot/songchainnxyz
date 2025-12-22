@@ -3,8 +3,9 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AudienceProfile } from '@/types/database';
 import { 
-  isBaseAppAvailable, 
-  connectWithBaseApp, 
+  hasWalletProvider, 
+  connectWallet,
+  signMessage,
   generateNonce 
 } from '@/lib/baseWallet';
 
@@ -17,13 +18,39 @@ interface AuthContextType {
   audienceProfile: AudienceProfile | null;
   needsOnboarding: boolean;
   walletAddress: string | null;
-  isBaseAppDetected: boolean;
-  signInWithBase: () => Promise<{ error: Error | null }>;
+  isWalletDetected: boolean;
+  signInWithWallet: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  // Legacy alias
+  signInWithBase: () => Promise<{ error: Error | null }>;
+  isBaseAppDetected: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Create a SIWE message for wallet signing
+ */
+function createSIWEMessage(
+  address: string,
+  nonce: string,
+  domain: string = window.location.host,
+  uri: string = window.location.origin
+): string {
+  const issuedAt = new Date().toISOString();
+  
+  return `${domain} wants you to sign in with your Ethereum account:
+${address}
+
+Sign in to $ongChainn with your wallet.
+
+URI: ${uri}
+Version: 1
+Chain ID: 8453
+Nonce: ${nonce}
+Issued At: ${issuedAt}`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -33,11 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [audienceProfile, setAudienceProfile] = useState<AudienceProfile | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isBaseAppDetected, setIsBaseAppDetected] = useState(false);
+  const [isWalletDetected, setIsWalletDetected] = useState(false);
 
-  // Check for Base App (and keep it fresh when the app regains focus)
+  // Check for any wallet provider (keep it fresh when the app regains focus)
   useEffect(() => {
-    const update = () => setIsBaseAppDetected(isBaseAppAvailable());
+    const update = () => setIsWalletDetected(hasWalletProvider());
 
     update();
 
@@ -136,38 +163,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Base App Sign-In Flow with Wallet Signature Verification
+   * Wallet Sign-In Flow with SIWE Signature Verification
    * 
-   * This implementation:
-   * 1. Detects if Base App wallet is available
-   * 2. If available: Uses real wallet connection with SIWE signature
-   * 3. If not available: Uses simulated connection for development
-   * 4. Verifies signature via edge function
-   * 5. Creates/authenticates user in Supabase
+   * Works with any EIP-1193 compatible wallet:
+   * - MetaMask
+   * - Coinbase Wallet
+   * - Rainbow
+   * - Base App
+   * - And any other Web3 wallet
    */
-  const signInWithBase = useCallback(async () => {
+  const signInWithWallet = useCallback(async () => {
     try {
-      // Generate nonce for SIWE message
-      const nonce = generateNonce();
-
-      // Attempt connection + signing (provider presence/availability is handled inside)
-      const connectionResult = await connectWithBaseApp(nonce);
-
-      if (
-        !connectionResult.success ||
-        !connectionResult.address ||
-        !connectionResult.message ||
-        !connectionResult.signature
-      ) {
+      // Check if wallet is available
+      if (!hasWalletProvider()) {
         return {
           error: new Error(
-            connectionResult.error ||
-              'Base App not detected. Please open this site inside Base App to continue.'
+            'No wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.'
           ),
         };
       }
 
-      const { address, message, signature } = connectionResult;
+      // Connect wallet and get address
+      const connectionResult = await connectWallet();
+
+      if (!connectionResult.success || !connectionResult.address) {
+        return {
+          error: new Error(
+            connectionResult.error || 'Failed to connect wallet. Please try again.'
+          ),
+        };
+      }
+
+      const address = connectionResult.address;
+
+      // Generate nonce for SIWE message
+      const nonce = generateNonce();
+
+      // Create SIWE message
+      const message = createSIWEMessage(address, nonce);
+
+      // Request signature from wallet
+      const signResult = await signMessage(message, address);
+
+      if (signResult.error || !signResult.signature) {
+        return {
+          error: new Error(
+            signResult.error || 'Signature request was rejected. Please try again.'
+          ),
+        };
+      }
+
+      const signature = signResult.signature;
 
       // Verify signature and authenticate via edge function
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
@@ -203,7 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     } catch (err: any) {
       return {
-        error: new Error(err?.message || 'Base App connection failed. Please try again.'),
+        error: new Error(err?.message || 'Wallet connection failed. Please try again.'),
       };
     }
   }, []);
@@ -228,10 +274,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       audienceProfile, 
       needsOnboarding,
       walletAddress,
-      isBaseAppDetected,
-      signInWithBase,
+      isWalletDetected,
+      signInWithWallet,
       signOut,
-      refreshProfile
+      refreshProfile,
+      // Legacy aliases for backward compatibility
+      signInWithBase: signInWithWallet,
+      isBaseAppDetected: isWalletDetected,
     }}>
       {children}
     </AuthContext.Provider>

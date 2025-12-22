@@ -24,7 +24,7 @@ function getBaseAppDeepLink(targetUrl: string) {
 const DEFAULT_COUNTRY = COUNTRY_CODES.find(c => c.code === 'ZM') || COUNTRY_CODES[0];
 
 export default function Auth() {
-  const { signInWithBase, isBaseAppDetected, walletAddress, user } = useAuth();
+  const { signInWithWallet, isWalletDetected, walletAddress, user } = useAuth();
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -47,16 +47,10 @@ export default function Auth() {
   const [pendingWalletConnection, setPendingWalletConnection] = useState(false);
 
   // Only detect Base App wallet, not MetaMask or other wallets
-  const hasBaseWallet = typeof window !== 'undefined' && (() => {
+  // Detect any wallet provider (MetaMask, Coinbase, Rainbow, etc.)
+  const hasWallet = typeof window !== 'undefined' && (() => {
     const ethereum = (window as any).ethereum;
-    if (!ethereum?.request) return false;
-    // Check for Base App or Coinbase Wallet specifically
-    if (ethereum.isBaseApp || ethereum.isCoinbaseWallet) return true;
-    // Check multi-provider array
-    if (Array.isArray(ethereum.providers)) {
-      return ethereum.providers.some((p: any) => p?.isBaseApp || p?.isCoinbaseWallet);
-    }
-    return false;
+    return !!ethereum?.request;
   })();
 
   const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/\D/g, '')}`;
@@ -68,11 +62,12 @@ export default function Auth() {
     setTimeout(() => setShowInstallPrompt(true), 2500);
   };
 
-  const handleBaseSignIn = async () => {
+  const handleWalletSignIn = async () => {
     setError(null);
-    // Only proceed if Base Wallet is available
-    if (!hasBaseWallet && !isBaseAppDetected) {
-      openInBaseApp();
+    // Proceed if any wallet is available
+    if (!hasWallet && !isWalletDetected) {
+      // Show install options
+      setShowInstallPrompt(true);
       return;
     }
 
@@ -82,7 +77,7 @@ export default function Auth() {
       await new Promise((resolve) => setTimeout(resolve, 150));
       setConnectionState('signing');
 
-      const result = await signInWithBase();
+      const result = await signInWithWallet();
 
       if (result.error) {
         setError(result.error.message);
@@ -203,13 +198,13 @@ export default function Auth() {
     }
   };
 
-  // Auto-trigger wallet sign-in when opened inside Base App (only on main view)
+  // Auto-trigger wallet sign-in when wallet is detected (only on main view)
   React.useEffect(() => {
-    if ((isBaseAppDetected || hasBaseWallet) && connectionState === 'idle' && !error && authView === 'main') {
-      const timer = setTimeout(() => handleBaseSignIn(), 500);
+    if ((isWalletDetected || hasWallet) && connectionState === 'idle' && !error && authView === 'main') {
+      const timer = setTimeout(() => handleWalletSignIn(), 500);
       return () => clearTimeout(timer);
     }
-  }, [isBaseAppDetected, hasBaseWallet, authView]);
+  }, [isWalletDetected, hasWallet, authView]);
 
   React.useEffect(() => {
     if (walletAddress && connectionState === 'success') {
@@ -230,7 +225,7 @@ export default function Auth() {
       case 'success':
         return (<><CheckCircle2 className="w-5 h-5 mr-2" />Connected!</>);
       default:
-        return (<><Wallet className="w-5 h-5 mr-2" />{hasBaseWallet || isBaseAppDetected ? 'Connect Base Wallet' : 'Open in Base App'}</>);
+        return (<><Wallet className="w-5 h-5 mr-2" />{hasWallet || isWalletDetected ? 'Connect Wallet' : 'Install Wallet'}</>);
     }
   };
 
@@ -346,25 +341,25 @@ export default function Auth() {
                 )}
 
                 <Button
-                  onClick={handleBaseSignIn}
+                  onClick={handleWalletSignIn}
                   disabled={isWalletLoading}
                   className="w-full gradient-primary text-primary-foreground font-semibold h-14 rounded-2xl shadow-glow hover-scale press-effect text-base"
                 >
                   {getButtonContent()}
                 </Button>
 
-                {(!isBaseAppDetected || showInstallPrompt) && (
+                {(!isWalletDetected || showInstallPrompt) && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      {showInstallPrompt ? "Base App not found:" : "Don't have Base App?"}
+                      {showInstallPrompt ? "No wallet detected:" : "Don't have a wallet?"}
                     </p>
                     <a
-                      href="https://base.app/invite/imanafrikah/WTL0V0H3"
+                      href="https://metamask.io/download/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
                     >
-                      Download Base App
+                      Download MetaMask
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
@@ -372,25 +367,25 @@ export default function Auth() {
               </motion.div>
             ) : authView === 'main' ? (
               <motion.div key="main" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Base Wallet Primary CTA */}
+                {/* Wallet Primary CTA */}
                 <div className="text-center mb-6">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs font-medium text-primary mb-4">
                     <Shield className="w-3.5 h-3.5" />
                     Base Wallet Required
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Connect with Base Wallet to enter SongChainn. This supports culture, identity, and future ownership.
+                    Connect with any Base-compatible wallet to enter SongChainn. This supports culture, identity, and future ownership.
                   </p>
                 </div>
 
-                {(isBaseAppDetected || hasBaseWallet) && (
+                {(isWalletDetected || hasWallet) && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-xl bg-green-500/10 border border-green-500/20"
                   >
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-400 font-medium">Base Wallet detected</span>
+                    <span className="text-sm text-green-400 font-medium">Wallet detected</span>
                   </motion.div>
                 )}
 
@@ -401,27 +396,38 @@ export default function Auth() {
                 )}
 
                 <Button
-                  onClick={handleBaseSignIn}
+                  onClick={handleWalletSignIn}
                   disabled={isWalletLoading}
                   className="w-full gradient-primary text-primary-foreground font-semibold h-14 rounded-2xl shadow-glow hover-scale press-effect text-base"
                 >
                   {getButtonContent()}
                 </Button>
 
-                {(!isBaseAppDetected || showInstallPrompt) && (
+                {(!isWalletDetected || showInstallPrompt) && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      {showInstallPrompt ? "Base App not found. Install it to continue:" : "Don't have Base App yet?"}
+                      {showInstallPrompt ? "No wallet detected. Install one to continue:" : "Don't have a wallet yet?"}
                     </p>
-                    <a
-                      href="https://base.app/invite/imanafrikah/WTL0V0H3"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
-                    >
-                      Download Base App
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                    <div className="flex gap-2">
+                      <a
+                        href="https://metamask.io/download/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
+                      >
+                        MetaMask
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href="https://base.app/invite/imanafrikah/WTL0V0H3"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass text-primary hover:bg-secondary/50 transition-colors font-medium text-sm press-effect"
+                      >
+                        Base App
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
                 )}
 

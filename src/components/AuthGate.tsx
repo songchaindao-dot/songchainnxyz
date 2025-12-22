@@ -107,7 +107,7 @@ export function AuthGate({ onLogin }: AuthGateProps) {
               onClick={onLogin}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
             >
-              I already have Base App – Continue
+              I have a wallet – Continue
             </button>
           </motion.div>
 
