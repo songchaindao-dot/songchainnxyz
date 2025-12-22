@@ -13,46 +13,6 @@ export const SONG_REGISTRY_ADDRESS = "0x39e8317fEEBE3129f3d876c1F6D35271849797F9
 // Re-export for convenience
 export { BASE_CHAIN_ID_HEX as BASE_CHAIN_ID };
 
-// Minimal ABI for SongRegistry ERC-1155 contract
-export const SONG_REGISTRY_ABI = [
-  // Read functions
-  {
-    name: "balanceOf",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "account", type: "address" },
-      { name: "id", type: "uint256" }
-    ],
-    outputs: [{ name: "", type: "uint256" }]
-  },
-  {
-    name: "getSongPrice",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "songId", type: "uint256" }],
-    outputs: [{ name: "", type: "uint256" }]
-  },
-  {
-    name: "getSongArtist",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "songId", type: "uint256" }],
-    outputs: [{ name: "", type: "address" }]
-  },
-  // Write functions
-  {
-    name: "buySong",
-    type: "function",
-    stateMutability: "payable",
-    inputs: [
-      { name: "songId", type: "uint256" },
-      { name: "amount", type: "uint256" }
-    ],
-    outputs: []
-  }
-] as const;
-
 // Interface for on-chain song data
 export interface OnChainSong {
   songId: number;
@@ -295,48 +255,6 @@ export async function getSongPriceFromContract(songId: string): Promise<bigint |
     console.error("Error fetching song price:", error);
     return null;
   }
-}
-
-/**
- * Wait for a transaction to be confirmed on the blockchain
- * Returns the transaction receipt once confirmed
- */
-export async function waitForTransaction(
-  txHash: string,
-  maxAttempts: number = 30,
-  intervalMs: number = 2000
-): Promise<{ confirmed: boolean; receipt?: any; error?: string }> {
-  const provider = getWalletProvider();
-  if (!provider) {
-    return { confirmed: false, error: "No wallet provider" };
-  }
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const receipt = await provider.request({
-        method: "eth_getTransactionReceipt",
-        params: [txHash]
-      });
-
-      if (receipt) {
-        // Check if transaction was successful (status = 0x1)
-        const status = receipt.status;
-        if (status === "0x1" || status === 1) {
-          return { confirmed: true, receipt };
-        } else {
-          return { confirmed: false, error: "Transaction reverted on chain" };
-        }
-      }
-
-      // Transaction not yet mined, wait and retry
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-    } catch (error) {
-      console.error("Error checking transaction receipt:", error);
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-    }
-  }
-
-  return { confirmed: false, error: "Transaction confirmation timeout" };
 }
 
 /**

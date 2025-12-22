@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown, Sparkles } from 'lucide-react';
+import { X, Unlock, Loader2, Music, Wallet, AlertCircle, Check, ArrowRight, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Song } from '@/data/musicData';
-import { formatEthPrice, parseEthToWei } from '@/lib/songRegistry';
-import { connectWallet, hasWalletProvider, getWalletProvider } from '@/lib/baseWallet';
+import { connectWallet, hasWalletProvider } from '@/lib/baseWallet';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
