@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, ExternalLink, Loader2, Shield, Music, Users, CheckCircle2, Mail, Phone, ChevronDown, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Wallet, ExternalLink, Loader2, Shield, Music, Users, CheckCircle2, Mail, Phone, ChevronDown, Eye, EyeOff, ArrowLeft, AlertCircle, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +11,8 @@ import { AnimatedBackground } from '@/components/ui/animated-background';
 import { CountryCodeSelector } from '@/components/CountryCodeSelector';
 import { COUNTRY_CODES, CountryCode } from '@/data/countryCodes';
 import { cn } from '@/lib/utils';
+import { useWeb3Wallet } from '@/hooks/useWeb3Wallet';
+import { useNavigate } from 'react-router-dom';
 
 type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success';
 type AuthMode = 'signin' | 'signup';
@@ -20,7 +22,9 @@ type AuthView = 'main' | 'email' | 'phone' | 'verify-otp' | 'connect-wallet';
 const DEFAULT_COUNTRY = COUNTRY_CODES.find(c => c.code === 'ZM') || COUNTRY_CODES[0];
 
 export default function Auth() {
+  const navigate = useNavigate();
   const { signInWithWallet, isWalletDetected, walletAddress, user } = useAuth();
+  const { openConnectModal, isConnected, address: web3Address } = useWeb3Wallet();
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -49,10 +53,23 @@ export default function Auth() {
 
   const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/\D/g, '')}`;
 
+  // Handle WalletConnect connection success
+  useEffect(() => {
+    if (isConnected && web3Address && connectionState === 'idle') {
+      // User connected via WalletConnect modal, now sign in
+      handleWalletSignIn();
+    }
+  }, [isConnected, web3Address]);
+
+  const handleWalletConnect = async () => {
+    setError(null);
+    await openConnectModal();
+  };
+
   const handleWalletSignIn = async () => {
     setError(null);
-    // Proceed if any wallet is available
-    if (!hasWallet && !isWalletDetected) {
+    // Proceed if any wallet is available (injected or WalletConnect)
+    if (!hasWallet && !isWalletDetected && !isConnected) {
       return;
     }
 
@@ -333,10 +350,21 @@ export default function Auth() {
                   {getButtonContent()}
                 </Button>
 
+                {/* WalletConnect QR Option */}
+                <Button
+                  onClick={handleWalletConnect}
+                  disabled={isWalletLoading}
+                  variant="outline"
+                  className="w-full h-12 rounded-2xl mt-3 border-border/50 hover:bg-secondary/30 text-foreground font-medium"
+                >
+                  <QrCode className="w-5 h-5 mr-2" />
+                  Scan QR with Mobile Wallet
+                </Button>
+
                 {!hasWallet && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      No wallet detected. Install one:
+                      Or install a browser wallet:
                     </p>
                     <div className="flex gap-2">
                       <a
@@ -399,10 +427,21 @@ export default function Auth() {
                   {getButtonContent()}
                 </Button>
 
+                {/* WalletConnect QR Option - always show for mobile wallet users */}
+                <Button
+                  onClick={handleWalletConnect}
+                  disabled={isWalletLoading}
+                  variant="outline"
+                  className="w-full h-12 rounded-2xl mt-3 border-border/50 hover:bg-secondary/30 text-foreground font-medium"
+                >
+                  <QrCode className="w-5 h-5 mr-2" />
+                  Scan QR with Mobile Wallet
+                </Button>
+
                 {!hasWallet && (
                   <div className="text-center pt-4 mt-4 border-t border-border/50">
                     <p className="text-xs text-muted-foreground mb-3">
-                      No wallet detected. Install one to continue:
+                      Or install a browser wallet:
                     </p>
                     <div className="flex gap-2">
                       <a
