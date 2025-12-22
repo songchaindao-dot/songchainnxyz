@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
-import { isOnChainSong, hasUsedPreview, markPreviewUsed, addPreviewTime, getPreviewThreshold } from '@/lib/songRegistry';
-import { toast } from 'sonner';
+import { isOnChainSong, hasUsedPreview, markPreviewUsed, addPreviewTime } from '@/lib/songRegistry';
 
 // Split context for better performance - components only re-render for what they need
 interface PlayerStateContext {
@@ -92,15 +91,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (isPreviewMode && currentSong) {
         const elapsed = audio.currentTime - previewTimeTrackingRef.current.lastTime;
         if (elapsed > 0 && elapsed < 2) { // Sanity check for reasonable time increment
-          // Check if 5-second threshold reached - just mark as used, don't stop
-          const thresholdReached = addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
-          if (thresholdReached && !previewNotifiedRef.current) {
-            // Show notification only once per session
-            previewNotifiedRef.current = true;
-            toast.info('Preview counted - unlock required for next play', {
-              duration: 3000,
-            });
-          }
+          // Check if 5-second threshold reached - silently mark as used
+          addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
         }
         previewTimeTrackingRef.current.lastTime = audio.currentTime;
       }
@@ -136,9 +128,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setBlockedSongId(currentSong.id);
         setIsPreviewMode(false);
         setIsPlaying(false);
-        toast.info('Preview finished - unlock to listen again', {
-          duration: 4000,
-        });
         return;
       }
       
@@ -217,20 +206,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       } else {
         // Check if preview was already used (threshold exceeded)
         if (hasUsedPreview(song.id, userAddress)) {
-          // Block playback - preview already exhausted
+          // Block playback - preview already exhausted, let UI handle unlock modal
           setBlockedSongId(song.id);
-          toast.error('Free preview used - unlock to listen again', {
-            duration: 4000,
-          });
           return; // Don't play at all
         }
         
         // Allow full preview play - will be marked as used after 5 seconds
         setIsPreviewMode(true);
         previewUserRef.current = userAddress;
-        toast.info('Playing free preview - one full listen allowed', {
-          duration: 4000,
-        });
       }
     } else {
       setIsPreviewMode(false);
@@ -252,8 +235,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const togglePlay = useCallback(() => {
     // Don't allow play if current song is blocked
     if (currentSong && blockedSongId === currentSong.id) {
-      toast.error('Unlock this song to continue listening');
-      return;
+      return; // Silently block - UI will show locked state
     }
     
     if (audioRef.current) {
@@ -277,8 +259,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const play = useCallback(() => {
     // Don't allow play if current song is blocked
     if (currentSong && blockedSongId === currentSong.id) {
-      toast.error('Unlock this song to continue listening');
-      return;
+      return; // Silently block - UI will show locked state
     }
     
     if (audioRef.current && currentSong) {
