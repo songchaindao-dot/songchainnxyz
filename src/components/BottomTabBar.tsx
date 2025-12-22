@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Compass, Users, MessageCircle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePlayerState } from '@/context/PlayerContext';
+import { useSafePlayerState } from '@/context/PlayerContext';
 
 const tabItems = [
   { path: '/', label: 'Home', icon: Home },
@@ -14,7 +14,8 @@ const tabItems = [
 
 export function BottomTabBar() {
   const location = useLocation();
-  const { currentSong } = usePlayerState();
+  const playerState = useSafePlayerState();
+  const currentSong = playerState?.currentSong;
 
   // Hide tab bar when music is playing - player takes its place
   if (currentSong) return null;

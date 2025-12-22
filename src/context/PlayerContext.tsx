@@ -395,6 +395,11 @@ export function usePlayerState() {
   return context;
 }
 
+// Safe hook that returns undefined if not in provider (for optional usage)
+export function useSafePlayerState() {
+  return useContext(PlayerStateCtx);
+}
+
 // Hook for components that need time updates (progress bar, time display)
 export function usePlayerTime() {
   const context = useContext(PlayerTimeCtx);
