@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
 import { isOnChainSong, hasUsedPreview, markPreviewUsed, addPreviewTime } from '@/lib/songRegistry';
+import { toast } from 'sonner';
 
 // Split context for better performance - components only re-render for what they need
 interface PlayerStateContext {
@@ -214,6 +215,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         // Allow full preview play - will be marked as used after 5 seconds
         setIsPreviewMode(true);
         previewUserRef.current = userAddress;
+        
+        // Show one-time educational message about preview policy
+        toast('🎵 One Free Listen', {
+          description: "This is your only free preview. Please don't skip - once it ends or you navigate away, you'll need to unlock to listen again.",
+          duration: 6000,
+        });
       }
     } else {
       setIsPreviewMode(false);
