@@ -25,6 +25,11 @@ export interface Song {
   likes: number;
   townSquare: string;
   genre: Genre;
+  // On-chain token data (optional - only for token-gated songs)
+  onChainId?: number;
+  tokenAddress?: string;
+  artistWallet?: string;
+  isTokenGated?: boolean;
 }
 
 export interface Artist {
@@ -141,6 +146,11 @@ export const SONGS: Song[] = [
     likes: 489,
     townSquare: 'Livingstone Town Square',
     genre: 'Afro',
+    // On-chain token data - songId 0 on SongRegistry
+    onChainId: 0,
+    tokenAddress: '0x39e8317fEEBE3129f3d876c1F6D35271849797F9',
+    artistWallet: '0x4440397b9E67A020bc96269F263817BE63184F3A',
+    isTokenGated: true,
   },
 ];
 
