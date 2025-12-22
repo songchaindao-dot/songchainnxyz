@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Song } from '@/data/musicData';
@@ -169,20 +169,20 @@ export function UnlockSongModal({
   const hasEnoughBalance = balance && parseFloat(balance) >= parseFloat(selectedPrice);
 
   return (
-    <AnimatePresence>
+    <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: 100 }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 100 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-card border border-border rounded-t-3xl sm:rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="relative w-full max-w-md mx-auto bg-card border border-border rounded-2xl overflow-hidden max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Drag Handle (Mobile) */}
@@ -624,6 +624,6 @@ export function UnlockSongModal({
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </>
   );
 }

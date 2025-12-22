@@ -465,33 +465,32 @@ export async function buySong(
     // We DO NOT force gas settings; we only estimate and make sure the wallet has enough for value + fee.
     try {
       onStatusUpdate?.("Estimating network fee...");
-      const [gasHex, gasPriceHex, balanceHex] = await Promise.all([
-        provider.request({ method: "eth_estimateGas", params: [txParams] }),
+      const [gasPriceHex, balanceHex] = await Promise.all([
         provider.request({ method: "eth_gasPrice" }),
         provider.request({ method: "eth_getBalance", params: [from, "latest"] }),
       ]);
 
-      const gas = BigInt(gasHex);
       const gasPrice = BigInt(gasPriceHex);
       const balanceWei = BigInt(balanceHex);
 
-      // Add ~30% buffer to handle Base fee spikes between estimate and confirmation.
-      const feeEstimateWei = (gas * gasPrice * BigInt(13)) / BigInt(10);
-      const fallbackFeeWei = BigInt("50000000000000"); // 0.00005 ETH safety buffer
+      // Use a fixed gas estimate (~100k) with buffer instead of eth_estimateGas 
+      // (eth_estimateGas can revert if contract has validation issues we skip at runtime)
+      const estimatedGas = BigInt(100000);
+      const feeEstimateWei = (estimatedGas * gasPrice * BigInt(15)) / BigInt(10); // 50% buffer
 
-      const requiredWei = BigInt(priceWei) + (feeEstimateWei > 0n ? feeEstimateWei : fallbackFeeWei);
+      const requiredWei = BigInt(priceWei) + feeEstimateWei;
 
       if (balanceWei < requiredWei) {
         const shortWei = requiredWei - balanceWei;
         const shortEth = Number(shortWei) / 1e18;
         return {
           success: false,
-          error: `Insufficient ETH for price + network fee. Add ~${shortEth.toFixed(6)} ETH on Base and try again.`,
+          error: `Insufficient ETH. Add ~${shortEth.toFixed(5)} ETH on Base and try again.`,
         };
       }
     } catch (preflightError) {
       // If estimation fails for any wallet, don't block the flow — the wallet will still try.
-      console.warn("Preflight fee estimation skipped:", preflightError);
+      console.warn("Preflight balance check skipped:", preflightError);
     }
 
     // Step 4: Send transaction
@@ -542,23 +541,23 @@ export async function buySong(
       return { success: false, error: "No transaction hash received" };
     }
 
-    // Step 5: Wait for blockchain confirmation
+    // Step 5: Wait for blockchain confirmation (reduced timeout for faster feedback)
     onStatusUpdate?.("Transaction sent! Confirming...");
-    
-    const maxAttempts = 60; // 2 minutes max
+
+    const maxAttempts = 30; // ~60 seconds max (was 2 min - now faster feedback)
     const intervalMs = 2000;
-    
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Update status every 10 seconds
-      if (attempt > 0 && attempt % 5 === 0) {
-        const seconds = Math.floor(attempt * intervalMs / 1000);
+      // Update status with elapsed time
+      if (attempt > 0) {
+        const seconds = attempt * 2;
         onStatusUpdate?.(`Confirming on blockchain... (${seconds}s)`);
       }
-      
+
       try {
         const receipt = await provider.request({
           method: "eth_getTransactionReceipt",
-          params: [txHash]
+          params: [txHash],
         });
 
         if (receipt) {
@@ -568,28 +567,28 @@ export async function buySong(
             onStatusUpdate?.("Transaction confirmed!");
             return { success: true, txHash };
           } else {
-            // Transaction reverted
-            return { 
-              success: false, 
+            // Transaction reverted on-chain
+            return {
+              success: false,
               txHash,
-              error: "Transaction reverted. The smart contract rejected it." 
+              error: "Transaction failed on blockchain. Please try again.",
             };
           }
         }
 
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
       } catch (receiptError) {
         console.error("Error checking receipt:", receiptError);
         // Continue polling, don't fail yet
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
       }
     }
-    
-    // Transaction submitted but not confirmed in time - still might succeed
-    return { 
-      success: false, 
+
+    // Transaction submitted but not confirmed in time
+    return {
+      success: false,
       txHash,
-      error: `Transaction pending. Check BaseScan: basescan.org/tx/${txHash}` 
+      error: `Transaction still pending after 60s. View on BaseScan: basescan.org/tx/${txHash}`,
     };
     
   } catch (error: any) {
