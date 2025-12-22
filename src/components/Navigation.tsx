@@ -126,6 +126,18 @@ export function Navigation() {
 
               <NotificationDropdown />
 
+              {/* Desktop Sign Out button */}
+              <motion.button
+                onClick={handleLogout}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-sm"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden xl:inline">Sign Out</span>
+              </motion.button>
+
               {/* Mobile Hamburger Menu Button */}
               <motion.button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -255,7 +267,7 @@ export function Navigation() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: (navItems.length + 1) * 0.05 }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-left transition-all glass text-red-500 hover:bg-red-500/10 hover:border-red-500/20 border border-transparent"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-left transition-all glass text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
                 >
                   <LogOut className="w-5 h-5" />
                   <span>Sign Out</span>
