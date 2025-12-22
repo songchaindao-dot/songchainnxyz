@@ -79,7 +79,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   }, []);
 
   const handlePlay = useCallback(() => {
-    // Check if song is token-gated and user can't play
+    // Check if song is token-gated and user can't play (preview used)
     if (isTokenGated && !canPlay) {
       setShowUnlockModal(true);
       return;
@@ -88,16 +88,13 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
     if (isCurrentSong) {
       togglePlay();
     } else {
-      // If preview only, record that they're using their one preview
-      if (isPreviewOnly) {
-        recordPreviewPlay();
-        toast.info('Playing preview - unlock for unlimited access', {
-          duration: 5000
-        });
-      }
-      playSong(song);
+      // Pass ownership info to player for enforcement
+      const userAddress = user?.user_metadata?.wallet_address;
+      const hasOwnership = ownershipStatus === 'owned' || ownershipStatus === 'offline_ready';
+      
+      playSong(song, { userAddress, hasOwnership });
     }
-  }, [isTokenGated, canPlay, isCurrentSong, togglePlay, playSong, song, isPreviewOnly, recordPreviewPlay]);
+  }, [isTokenGated, canPlay, isCurrentSong, togglePlay, playSong, song, ownershipStatus, user]);
 
   const handleLike = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
