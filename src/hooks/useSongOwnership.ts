@@ -10,7 +10,10 @@ import {
   hasUsedPreview,
   markPreviewUsed,
   buySong,
-  parseEthToWei
+  parseEthToWei,
+  getPreviewTime,
+  getPreviewThreshold,
+  clearPreviewData
 } from '@/lib/songRegistry';
 
 export type OwnershipStatus = 'free' | 'preview' | 'preview_used' | 'owned' | 'offline_ready';
@@ -19,9 +22,11 @@ interface SongOwnership {
   status: OwnershipStatus;
   balance: bigint;
   offlinePlaysRemaining: number;
+  previewSecondsRemaining: number;
   isLoading: boolean;
   canPlay: boolean;
   isPreviewOnly: boolean;
+  isLocked: boolean;
   checkOwnership: () => Promise<void>;
   unlockSong: (ethAmount: string) => Promise<{ success: boolean; error?: string }>;
   recordPreviewPlay: () => void;
@@ -38,12 +43,17 @@ export function useSongOwnership(songId: string): SongOwnership {
   const [offlinePlaysRemaining, setOfflinePlaysRemaining] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUsed, setPreviewUsed] = useState(false);
+  const [previewTimeUsed, setPreviewTimeUsed] = useState(0);
   
   // Get user's wallet address (stored in audience_profiles or from session)
   const userAddress = user?.user_metadata?.wallet_address;
   
   // Check if this song requires on-chain ownership
   const isTokenGated = isOnChainSong(songId);
+  
+  // Calculate remaining preview seconds
+  const previewThreshold = getPreviewThreshold();
+  const previewSecondsRemaining = Math.max(0, previewThreshold - previewTimeUsed);
   
   // Determine ownership status
   const getStatus = useCallback((): OwnershipStatus => {
@@ -64,7 +74,10 @@ export function useSongOwnership(songId: string): SongOwnership {
   
   const status = getStatus();
   
-  // Determine if user can play
+  // Strict locking: if preview is used, block all playback
+  const isLocked = status === 'preview_used';
+  
+  // Determine if user can play - NO if preview is exhausted
   const canPlay = status === 'free' || status === 'owned' || status === 'offline_ready' || status === 'preview';
   const isPreviewOnly = status === 'preview';
   
@@ -99,11 +112,12 @@ export function useSongOwnership(songId: string): SongOwnership {
     }
   }, [isTokenGated, userAddress, songId]);
   
-  // Check preview status on mount
+  // Check preview status on mount and sync state
   useEffect(() => {
     if (isTokenGated) {
       setPreviewUsed(hasUsedPreview(songId, userAddress));
       setOfflinePlaysRemaining(getOfflinePlays(songId));
+      setPreviewTimeUsed(getPreviewTime(songId, userAddress));
     }
   }, [isTokenGated, songId, userAddress]);
   
@@ -130,6 +144,10 @@ export function useSongOwnership(songId: string): SongOwnership {
     if (result.success) {
       // Wait a moment for transaction to be indexed
       await new Promise(resolve => setTimeout(resolve, 2000));
+      // Clear preview data since user now owns the song
+      clearPreviewData(songId, userAddress);
+      setPreviewUsed(false);
+      setPreviewTimeUsed(0);
       // Refresh balance
       await checkOwnership();
     }
@@ -158,9 +176,11 @@ export function useSongOwnership(songId: string): SongOwnership {
     status,
     balance,
     offlinePlaysRemaining,
+    previewSecondsRemaining,
     isLoading,
     canPlay,
     isPreviewOnly,
+    isLocked,
     checkOwnership,
     unlockSong,
     recordPreviewPlay,

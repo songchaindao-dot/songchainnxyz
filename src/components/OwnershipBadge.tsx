@@ -1,10 +1,11 @@
-import { Lock, Unlock, Wifi, WifiOff } from 'lucide-react';
+import { Lock, Unlock, WifiOff, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OwnershipStatus } from '@/hooks/useSongOwnership';
 
 interface OwnershipBadgeProps {
   status: OwnershipStatus;
   offlinePlays?: number;
+  previewSecondsRemaining?: number;
   className?: string;
   size?: 'sm' | 'md';
 }
@@ -12,6 +13,7 @@ interface OwnershipBadgeProps {
 export function OwnershipBadge({ 
   status, 
   offlinePlays = 0, 
+  previewSecondsRemaining = 0,
   className,
   size = 'sm'
 }: OwnershipBadgeProps) {
@@ -26,8 +28,8 @@ export function OwnershipBadge({
   const badges: Record<OwnershipStatus, { label: string; icon: React.ReactNode; color: string } | null> = {
     free: null,
     preview: {
-      label: 'Preview',
-      icon: <Lock size={iconSize} />,
+      label: previewSecondsRemaining > 0 ? `${previewSecondsRemaining}s preview` : 'Preview',
+      icon: <Clock size={iconSize} />,
       color: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
     },
     preview_used: {

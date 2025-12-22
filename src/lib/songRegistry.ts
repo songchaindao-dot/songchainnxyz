@@ -89,6 +89,8 @@ export function getOnChainSongData(songId: string): OnChainSong | null {
  */
 const OFFLINE_PLAYS_PREFIX = "songchainn_offline_plays_";
 const PREVIEW_USED_PREFIX = "songchainn_preview_used_";
+const PREVIEW_TIME_PREFIX = "songchainn_preview_time_";
+const PREVIEW_THRESHOLD_SECONDS = 5; // Lock after 5 seconds of preview playback
 
 /**
  * Get remaining offline plays for a song
@@ -119,7 +121,34 @@ export function decrementOfflinePlays(songId: string): number {
 }
 
 /**
- * Check if preview has been used for a song
+ * Get accumulated preview time for a song
+ */
+export function getPreviewTime(songId: string, userAddress?: string): number {
+  const key = `${PREVIEW_TIME_PREFIX}${songId}_${userAddress || "anonymous"}`;
+  const stored = localStorage.getItem(key);
+  return stored ? parseFloat(stored) : 0;
+}
+
+/**
+ * Add to accumulated preview time for a song
+ * Returns true if preview threshold has been reached
+ */
+export function addPreviewTime(songId: string, seconds: number, userAddress?: string): boolean {
+  const key = `${PREVIEW_TIME_PREFIX}${songId}_${userAddress || "anonymous"}`;
+  const current = getPreviewTime(songId, userAddress);
+  const newTotal = current + seconds;
+  localStorage.setItem(key, newTotal.toString());
+  
+  // If threshold reached, mark preview as permanently used
+  if (newTotal >= PREVIEW_THRESHOLD_SECONDS) {
+    markPreviewUsed(songId, userAddress);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if preview has been used for a song (exceeded threshold)
  */
 export function hasUsedPreview(songId: string, userAddress?: string): boolean {
   const key = `${PREVIEW_USED_PREFIX}${songId}_${userAddress || "anonymous"}`;
@@ -127,11 +156,28 @@ export function hasUsedPreview(songId: string, userAddress?: string): boolean {
 }
 
 /**
- * Mark preview as used for a song
+ * Mark preview as permanently used for a song (locked until purchased)
  */
 export function markPreviewUsed(songId: string, userAddress?: string): void {
   const key = `${PREVIEW_USED_PREFIX}${songId}_${userAddress || "anonymous"}`;
   localStorage.setItem(key, "true");
+}
+
+/**
+ * Clear preview data when song is purchased (for ownership reset)
+ */
+export function clearPreviewData(songId: string, userAddress?: string): void {
+  const timeKey = `${PREVIEW_TIME_PREFIX}${songId}_${userAddress || "anonymous"}`;
+  const usedKey = `${PREVIEW_USED_PREFIX}${songId}_${userAddress || "anonymous"}`;
+  localStorage.removeItem(timeKey);
+  localStorage.removeItem(usedKey);
+}
+
+/**
+ * Get the preview threshold in seconds
+ */
+export function getPreviewThreshold(): number {
+  return PREVIEW_THRESHOLD_SECONDS;
 }
 
 /**

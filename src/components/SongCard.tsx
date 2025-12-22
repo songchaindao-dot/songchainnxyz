@@ -34,7 +34,9 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
     status: ownershipStatus, 
     canPlay, 
     isPreviewOnly, 
+    isLocked,
     offlinePlaysRemaining,
+    previewSecondsRemaining,
     unlockSong,
     recordPreviewPlay 
   } = useSongOwnership(song.id);
@@ -62,8 +64,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   }, []);
 
   const handlePlay = useCallback(() => {
-    // Check if song is token-gated and user can't play (preview used)
-    if (isTokenGated && !canPlay) {
+    // Check if song is token-gated and locked (preview exhausted)
+    if (isTokenGated && isLocked) {
       setShowUnlockModal(true);
       return;
     }
@@ -77,7 +79,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
       
       playSong(song, { userAddress, hasOwnership });
     }
-  }, [isTokenGated, canPlay, isCurrentSong, togglePlay, playSong, song, ownershipStatus, user]);
+  }, [isTokenGated, isLocked, isCurrentSong, togglePlay, playSong, song, ownershipStatus, user]);
 
   const handleLike = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,8 +122,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                   whileHover={{ opacity: 1 }}
                   className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm"
                 >
-                  {isTokenGated && !canPlay ? (
-                    <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                  {isTokenGated && isLocked ? (
+                    <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                   ) : (
                     <Play className="w-4 h-4 sm:w-5 sm:h-5 text-foreground ml-0.5" />
                   )}
@@ -142,6 +144,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                 <OwnershipBadge 
                   status={ownershipStatus} 
                   offlinePlays={offlinePlaysRemaining}
+                  previewSecondsRemaining={previewSecondsRemaining}
                 />
               )}
             </div>
@@ -202,6 +205,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               <OwnershipBadge 
                 status={ownershipStatus} 
                 offlinePlays={offlinePlaysRemaining}
+                previewSecondsRemaining={previewSecondsRemaining}
                 size="md"
               />
             </div>
@@ -238,8 +242,8 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                 whileTap={{ scale: 0.95 }}
                 className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-glow-intense"
               >
-                {isTokenGated && !canPlay ? (
-                  <Lock className="w-6 h-6 text-primary-foreground" />
+                {isTokenGated && isLocked ? (
+                  <Lock className="w-6 h-6 text-destructive" />
                 ) : isCurrentSong && isPlaying ? (
                   <Pause className="w-6 h-6 text-primary-foreground" />
                 ) : (
