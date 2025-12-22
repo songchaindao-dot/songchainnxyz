@@ -87,24 +87,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
       
-      // Track preview playback time and enforce 5-second limit
+      // Track preview playback time - mark as used after 5 seconds but don't interrupt
       if (isPreviewMode && currentSong) {
         const elapsed = audio.currentTime - previewTimeTrackingRef.current.lastTime;
         if (elapsed > 0 && elapsed < 2) { // Sanity check for reasonable time increment
-          previewTimeTrackingRef.current.accumulated += elapsed;
-          
-          // Check if 5-second threshold reached
+          // Check if 5-second threshold reached - just mark as used, don't stop
           const thresholdReached = addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
           if (thresholdReached) {
-            // Immediately stop and lock
-            audio.pause();
-            setBlockedSongId(currentSong.id);
-            setIsPreviewMode(false);
-            setIsPlaying(false);
-            toast.error('Preview limit reached - unlock to continue listening', {
-              duration: 5000,
+            // Preview is now used up - will be blocked on next play attempt
+            // But allow current playback to continue
+            toast.info('Preview counted - song will require unlock after this play', {
+              duration: 3000,
             });
-            return;
           }
         }
         previewTimeTrackingRef.current.lastTime = audio.currentTime;
@@ -129,25 +123,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [isPreviewMode, currentSong]);
 
-  // Handle song ended with preview locking
+  // Handle song ended - lock preview songs after they finish
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleEnded = () => {
-      // If this was a preview, lock the song
+      // If this was a preview song, ensure it's locked for future plays
       if (isPreviewMode && currentSong) {
         markPreviewUsed(currentSong.id, previewUserRef.current);
         setBlockedSongId(currentSong.id);
         setIsPreviewMode(false);
         setIsPlaying(false);
-        toast.error('Preview ended - unlock to continue listening', {
-          duration: 5000,
+        toast.info('Preview finished - unlock to listen again', {
+          duration: 4000,
         });
         return;
       }
       
-      // Only trigger if crossfade wasn't already started
+      // Only trigger next song if crossfade wasn't already started
       if (!crossfadeTriggeredRef.current) {
         playNextRef.current();
       }
@@ -223,18 +217,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (hasUsedPreview(song.id, userAddress)) {
           // Block playback - preview already exhausted
           setBlockedSongId(song.id);
-          toast.error('Preview already used - unlock to listen', {
+          toast.error('Free preview used - unlock to listen again', {
             duration: 4000,
           });
           return; // Don't play at all
         }
         
-        // Allow preview - still has remaining preview time
+        // Allow full preview play - will be marked as used after 5 seconds
         setIsPreviewMode(true);
         previewUserRef.current = userAddress;
-        const threshold = getPreviewThreshold();
-        toast.info(`Playing preview - locks after ${threshold} seconds`, {
-          duration: 5000,
+        toast.info('Playing free preview - one full listen allowed', {
+          duration: 4000,
         });
       }
     } else {
