@@ -5,7 +5,7 @@
  * Contract address: 0x39e8317fEEBE3129f3d876c1F6D35271849797F9
  */
 
-import { getWalletProvider, switchToBaseChain, BASE_CHAIN_ID_HEX } from './baseWallet';
+import { getWalletProvider, BASE_CHAIN_ID_HEX } from './baseWallet';
 
 // Contract address on Base mainnet
 export const SONG_REGISTRY_ADDRESS = "0x39e8317fEEBE3129f3d876c1F6D35271849797F9";
@@ -388,14 +388,16 @@ export async function buySong(
     
     // Step 2: Ensure we're on Base network
     onStatusUpdate?.("Checking network...");
-    const currentChainId = await provider.request({ method: "eth_chainId" });
-    
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    let currentChainId = await provider.request({ method: "eth_chainId" });
+
     if (currentChainId !== BASE_CHAIN_ID_HEX) {
       onStatusUpdate?.("Switching to Base network...");
       try {
         await provider.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId: BASE_CHAIN_ID_HEX }]
+          params: [{ chainId: BASE_CHAIN_ID_HEX }],
         });
       } catch (switchError: any) {
         if (switchError?.code === 4902) {
@@ -404,16 +406,21 @@ export async function buySong(
           try {
             await provider.request({
               method: "wallet_addEthereumChain",
-              params: [{
-                chainId: BASE_CHAIN_ID_HEX,
-                chainName: "Base",
-                nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-                rpcUrls: ["https://mainnet.base.org"],
-                blockExplorerUrls: ["https://basescan.org"]
-              }]
+              params: [
+                {
+                  chainId: BASE_CHAIN_ID_HEX,
+                  chainName: "Base",
+                  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+                  rpcUrls: ["https://mainnet.base.org"],
+                  blockExplorerUrls: ["https://basescan.org"],
+                },
+              ],
             });
-          } catch (addError: any) {
-            return { success: false, error: "Failed to add Base network. Please add it manually." };
+          } catch {
+            return {
+              success: false,
+              error: "Failed to add Base network. Please add it in your wallet and try again.",
+            };
           }
         } else if (switchError?.code === 4001) {
           return { success: false, error: "Please switch to Base network to continue" };
@@ -422,57 +429,112 @@ export async function buySong(
           return { success: false, error: "Failed to switch to Base network" };
         }
       }
-      // Wait for chain switch to complete
-      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Wait until the wallet actually reports Base (prevents race conditions)
+      for (let i = 0; i < 12; i++) {
+        await sleep(250);
+        currentChainId = await provider.request({ method: "eth_chainId" });
+        if (currentChainId === BASE_CHAIN_ID_HEX) break;
+      }
+
+      if (currentChainId !== BASE_CHAIN_ID_HEX) {
+        return { success: false, error: "Network switch incomplete. Please try again." };
+      }
     }
-    
+
     // Step 3: Prepare transaction data
     onStatusUpdate?.("Preparing transaction...");
     const data = encodeFunctionCall("buySong", [onChainData.songId, amount]);
-    
+
     if (data === "0x") {
       return { success: false, error: "Failed to encode transaction" };
     }
-    
+
     // Convert price to hex - ensure it's valid
     const priceHex = `0x${BigInt(priceWei).toString(16)}`;
-    
+
     // Transaction params - let wallet estimate gas for best reliability
     const txParams = {
       from,
       to: SONG_REGISTRY_ADDRESS,
       value: priceHex,
-      data
+      data,
     };
+
+    // Step 3.5: Preflight check (prevents "insufficient funds" due to fast-changing network fees)
+    // We DO NOT force gas settings; we only estimate and make sure the wallet has enough for value + fee.
+    try {
+      onStatusUpdate?.("Estimating network fee...");
+      const [gasHex, gasPriceHex, balanceHex] = await Promise.all([
+        provider.request({ method: "eth_estimateGas", params: [txParams] }),
+        provider.request({ method: "eth_gasPrice" }),
+        provider.request({ method: "eth_getBalance", params: [from, "latest"] }),
+      ]);
+
+      const gas = BigInt(gasHex);
+      const gasPrice = BigInt(gasPriceHex);
+      const balanceWei = BigInt(balanceHex);
+
+      // Add ~30% buffer to handle Base fee spikes between estimate and confirmation.
+      const feeEstimateWei = (gas * gasPrice * BigInt(13)) / BigInt(10);
+      const fallbackFeeWei = BigInt("50000000000000"); // 0.00005 ETH safety buffer
+
+      const requiredWei = BigInt(priceWei) + (feeEstimateWei > 0n ? feeEstimateWei : fallbackFeeWei);
+
+      if (balanceWei < requiredWei) {
+        const shortWei = requiredWei - balanceWei;
+        const shortEth = Number(shortWei) / 1e18;
+        return {
+          success: false,
+          error: `Insufficient ETH for price + network fee. Add ~${shortEth.toFixed(6)} ETH on Base and try again.`,
+        };
+      }
+    } catch (preflightError) {
+      // If estimation fails for any wallet, don't block the flow — the wallet will still try.
+      console.warn("Preflight fee estimation skipped:", preflightError);
+    }
 
     // Step 4: Send transaction
     onStatusUpdate?.("Confirm in your wallet...");
-    
+
     let txHash: string;
     try {
       txHash = await provider.request({
         method: "eth_sendTransaction",
-        params: [txParams]
+        params: [txParams],
       });
     } catch (sendError: any) {
       console.error("Send transaction error:", sendError);
-      
+
       if (sendError?.code === 4001 || sendError?.code === "ACTION_REJECTED") {
         return { success: false, error: "Transaction cancelled" };
       }
-      if (sendError?.message?.toLowerCase().includes("insufficient") || 
-          sendError?.message?.toLowerCase().includes("funds") ||
-          sendError?.code === -32000) {
-        return { success: false, error: "Insufficient ETH for transaction + gas fees" };
+      if (sendError?.code === -32002) {
+        return {
+          success: false,
+          error: "A wallet request is already open. Please open your wallet and confirm or reject it.",
+        };
+      }
+      if (
+        sendError?.message?.toLowerCase().includes("insufficient") ||
+        sendError?.message?.toLowerCase().includes("funds") ||
+        sendError?.code === -32000
+      ) {
+        return {
+          success: false,
+          error: "Insufficient ETH for song price + network fee on Base. Please top up and try again.",
+        };
       }
       if (sendError?.message?.toLowerCase().includes("nonce")) {
-        return { success: false, error: "Transaction error. Please refresh and try again." };
+        return { success: false, error: "Transaction nonce issue. Please wait 30s and try again." };
       }
-      if (sendError?.message?.toLowerCase().includes("underpriced") ||
-          sendError?.message?.toLowerCase().includes("replacement")) {
-        return { success: false, error: "Gas price too low. Please try again." };
+      if (
+        sendError?.message?.toLowerCase().includes("underpriced") ||
+        sendError?.message?.toLowerCase().includes("replacement")
+      ) {
+        return { success: false, error: "Network fee changed too fast. Please try again." };
       }
-      
+
       return { success: false, error: sendError?.message || "Transaction failed" };
     }
     

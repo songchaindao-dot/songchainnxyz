@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export function UnlockSongModal({
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState(walletAddress);
   const [processingStatus, setProcessingStatus] = useState<string>('Processing...');
+  const submittingRef = useRef(false);
   const { balance, isLoading: isBalanceLoading } = useWalletBalance(connectedAddress || null);
 
   const hasWallet = hasWalletProvider();
@@ -96,6 +97,10 @@ export function UnlockSongModal({
       return;
     }
 
+    // Prevent double submits (wallet popups + fast clicks)
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     setStep('signing');
     setError(null);
     setProcessingStatus('Preparing transaction...');
@@ -104,15 +109,15 @@ export function UnlockSongModal({
       // Show signing step briefly
       await new Promise(resolve => setTimeout(resolve, 500));
       setStep('processing');
-      
+
       // Pass the wallet address and status callback to the unlock function
       const result = await onUnlock(selectedPrice, connectedAddress, (status) => {
         setProcessingStatus(status);
       });
-      
+
       if (result.success) {
         setStep('success');
-        
+
         // Fire confetti celebration
         confetti({
           particleCount: 100,
@@ -120,11 +125,11 @@ export function UnlockSongModal({
           origin: { y: 0.6 },
           colors: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6']
         });
-        
-        toast.success(purchaseType === 'buy' 
-          ? '🎉 Congratulations! You now own this track!' 
+
+        toast.success(purchaseType === 'buy'
+          ? '🎉 Congratulations! You now own this track!'
           : '🎉 Congratulations! Song unlocked!');
-        
+
         setTimeout(() => {
           onClose();
           setStep('select');
@@ -136,6 +141,8 @@ export function UnlockSongModal({
     } catch (err: any) {
       setError(err?.message || 'An error occurred');
       setStep('error');
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -593,7 +600,7 @@ export function UnlockSongModal({
                 {/* Action Button */}
                 <Button
                   onClick={handleUnlock}
-                  disabled={!hasEnoughBalance && !isBalanceLoading}
+                  disabled={isBalanceLoading || !hasEnoughBalance}
                   className="w-full gradient-primary text-primary-foreground h-11 sm:h-12"
                 >
                   {purchaseType === 'buy' ? (
