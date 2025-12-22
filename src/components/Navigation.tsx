@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X, Download } from 'lucide-react';
+import { Home, Users, BookOpen, User, Flame, MessageCircle, Gift, Compass, Menu, X, Download, LogOut } from 'lucide-react';
 import { useEngagement } from '@/context/EngagementContext';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/songchainn-logo.webp';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { InviteFriends } from '@/components/InviteFriends';
+import { toast } from 'sonner';
 
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
@@ -21,6 +23,7 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { engagementPoints, currentStreak } = useEngagement();
+  const { signOut } = useAuth();
   const [showInvite, setShowInvite] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -30,6 +33,17 @@ export function Navigation() {
   const handleNavClick = (path: string) => {
     navigate(path);
     setMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setMobileMenuOpen(false);
+      toast.success('Signed out successfully');
+      navigate('/auth');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
   };
 
   return (
@@ -233,6 +247,18 @@ export function Navigation() {
                 >
                   <Download className="w-5 h-5" />
                   <span>Install App</span>
+                </motion.button>
+
+                {/* Logout Button */}
+                <motion.button
+                  onClick={handleLogout}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: (navItems.length + 1) * 0.05 }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-left transition-all glass text-red-500 hover:bg-red-500/10 hover:border-red-500/20 border border-transparent"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Sign Out</span>
                 </motion.button>
               </div>
             </motion.nav>
