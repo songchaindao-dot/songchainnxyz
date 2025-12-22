@@ -365,40 +365,43 @@ export async function buySong(
   }
   
   try {
-    // Get connected account
+    // Step 1: Get connected account
     onStatusUpdate?.("Connecting to wallet...");
-    const accounts = await provider.request({ method: "eth_accounts" });
+    let accounts = await provider.request({ method: "eth_accounts" });
+    
     if (!accounts || accounts.length === 0) {
-      // Try to request accounts if none connected
       try {
-        const requestedAccounts = await provider.request({ method: "eth_requestAccounts" });
-        if (!requestedAccounts || requestedAccounts.length === 0) {
-          return { success: false, error: "No wallet connected" };
+        accounts = await provider.request({ method: "eth_requestAccounts" });
+      } catch (e: any) {
+        if (e?.code === 4001) {
+          return { success: false, error: "Wallet connection rejected" };
         }
-      } catch (e) {
         return { success: false, error: "Please connect your wallet" };
       }
     }
     
-    const currentAccounts = await provider.request({ method: "eth_accounts" });
-    const from = currentAccounts[0];
+    if (!accounts || accounts.length === 0) {
+      return { success: false, error: "No wallet connected" };
+    }
     
-    // Check current chain and switch if needed
+    const from = accounts[0];
+    
+    // Step 2: Ensure we're on Base network
     onStatusUpdate?.("Checking network...");
-    try {
-      const currentChainId = await provider.request({ method: "eth_chainId" });
-      
-      if (currentChainId !== BASE_CHAIN_ID_HEX) {
-        onStatusUpdate?.("Switching to Base network...");
-        try {
-          await provider.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: BASE_CHAIN_ID_HEX }]
-          });
-        } catch (switchError: any) {
-          if (switchError?.code === 4902) {
-            // Chain not added, add it
-            onStatusUpdate?.("Adding Base network...");
+    const currentChainId = await provider.request({ method: "eth_chainId" });
+    
+    if (currentChainId !== BASE_CHAIN_ID_HEX) {
+      onStatusUpdate?.("Switching to Base network...");
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: BASE_CHAIN_ID_HEX }]
+        });
+      } catch (switchError: any) {
+        if (switchError?.code === 4902) {
+          // Chain not added, add it
+          onStatusUpdate?.("Adding Base network...");
+          try {
             await provider.request({
               method: "wallet_addEthereumChain",
               params: [{
@@ -409,22 +412,21 @@ export async function buySong(
                 blockExplorerUrls: ["https://basescan.org"]
               }]
             });
-          } else if (switchError?.code === 4001) {
-            return { success: false, error: "Please switch to Base network to continue" };
-          } else {
-            throw switchError;
+          } catch (addError: any) {
+            return { success: false, error: "Failed to add Base network. Please add it manually." };
           }
+        } else if (switchError?.code === 4001) {
+          return { success: false, error: "Please switch to Base network to continue" };
+        } else {
+          console.error("Chain switch error:", switchError);
+          return { success: false, error: "Failed to switch to Base network" };
         }
-        
-        // Wait a moment for chain switch to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
       }
-    } catch (chainError: any) {
-      console.error("Chain switch error:", chainError);
-      // Continue anyway, wallet might handle it
+      // Wait for chain switch to complete
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
     
-    // Encode buySong call with correct function selector
+    // Step 3: Prepare transaction data
     onStatusUpdate?.("Preparing transaction...");
     const data = encodeFunctionCall("buySong", [onChainData.songId, amount]);
     
@@ -432,16 +434,19 @@ export async function buySong(
       return { success: false, error: "Failed to encode transaction" };
     }
     
-    // Prepare transaction - let wallet handle gas estimation for reliability
-    const txParams: any = {
+    // Convert price to hex - ensure it's valid
+    const priceHex = `0x${BigInt(priceWei).toString(16)}`;
+    
+    // Transaction params - let wallet estimate gas for best reliability
+    const txParams = {
       from,
       to: SONG_REGISTRY_ADDRESS,
-      value: `0x${BigInt(priceWei).toString(16)}`,
+      value: priceHex,
       data
     };
 
-    // Send transaction - wallet will prompt user with current gas fees
-    onStatusUpdate?.("Confirm transaction in wallet...");
+    // Step 4: Send transaction
+    onStatusUpdate?.("Confirm in your wallet...");
     
     let txHash: string;
     try {
@@ -450,29 +455,42 @@ export async function buySong(
         params: [txParams]
       });
     } catch (sendError: any) {
-      if (sendError?.code === 4001) {
+      console.error("Send transaction error:", sendError);
+      
+      if (sendError?.code === 4001 || sendError?.code === "ACTION_REJECTED") {
         return { success: false, error: "Transaction cancelled" };
       }
-      if (sendError?.message?.includes("insufficient") || sendError?.message?.includes("funds")) {
+      if (sendError?.message?.toLowerCase().includes("insufficient") || 
+          sendError?.message?.toLowerCase().includes("funds") ||
+          sendError?.code === -32000) {
         return { success: false, error: "Insufficient ETH for transaction + gas fees" };
       }
-      throw sendError;
+      if (sendError?.message?.toLowerCase().includes("nonce")) {
+        return { success: false, error: "Transaction error. Please refresh and try again." };
+      }
+      if (sendError?.message?.toLowerCase().includes("underpriced") ||
+          sendError?.message?.toLowerCase().includes("replacement")) {
+        return { success: false, error: "Gas price too low. Please try again." };
+      }
+      
+      return { success: false, error: sendError?.message || "Transaction failed" };
     }
     
     if (!txHash) {
       return { success: false, error: "No transaction hash received" };
     }
 
-    // Wait for transaction confirmation on blockchain
-    onStatusUpdate?.("Transaction sent! Waiting for confirmation...");
+    // Step 5: Wait for blockchain confirmation
+    onStatusUpdate?.("Transaction sent! Confirming...");
     
-    // Poll for confirmation with progress updates
-    const maxAttempts = 90; // 3 minutes max
+    const maxAttempts = 60; // 2 minutes max
     const intervalMs = 2000;
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Update status every 10 seconds
       if (attempt > 0 && attempt % 5 === 0) {
-        onStatusUpdate?.(`Confirming on blockchain... (${Math.floor(attempt * intervalMs / 1000)}s)`);
+        const seconds = Math.floor(attempt * intervalMs / 1000);
+        onStatusUpdate?.(`Confirming on blockchain... (${seconds}s)`);
       }
       
       try {
@@ -483,49 +501,50 @@ export async function buySong(
 
         if (receipt) {
           const status = receipt.status;
-          if (status === "0x1" || status === 1) {
+          // Check for success (0x1 = success)
+          if (status === "0x1" || status === 1 || status === "1") {
             onStatusUpdate?.("Transaction confirmed!");
             return { success: true, txHash };
           } else {
+            // Transaction reverted
             return { 
               success: false, 
               txHash,
-              error: "Transaction failed on blockchain. The contract may have rejected it." 
+              error: "Transaction reverted. The smart contract rejected it." 
             };
           }
         }
 
         await new Promise(resolve => setTimeout(resolve, intervalMs));
-      } catch (error) {
-        console.error("Error checking receipt:", error);
+      } catch (receiptError) {
+        console.error("Error checking receipt:", receiptError);
+        // Continue polling, don't fail yet
         await new Promise(resolve => setTimeout(resolve, intervalMs));
       }
     }
     
-    // Transaction was sent but not confirmed in time
+    // Transaction submitted but not confirmed in time - still might succeed
     return { 
       success: false, 
       txHash,
-      error: "Transaction pending. Check BaseScan for status." 
+      error: `Transaction pending. Check BaseScan: basescan.org/tx/${txHash}` 
     };
     
   } catch (error: any) {
     console.error("Purchase error:", error);
     
-    if (error?.code === 4001) {
+    // Handle specific error codes
+    if (error?.code === 4001 || error?.code === "ACTION_REJECTED") {
       return { success: false, error: "Transaction cancelled" };
     }
     if (error?.code === -32603) {
-      return { success: false, error: "Transaction failed. Please ensure you have enough ETH for gas." };
+      return { success: false, error: "Internal error. Please ensure you have enough ETH." };
     }
     if (error?.code === -32000) {
-      return { success: false, error: "Transaction underpriced. Network may be congested." };
+      return { success: false, error: "Insufficient funds for gas + value" };
     }
-    if (error?.message?.includes("insufficient")) {
-      return { success: false, error: "Insufficient ETH balance" };
-    }
-    if (error?.message?.includes("nonce")) {
-      return { success: false, error: "Transaction error. Please refresh and try again." };
+    if (error?.code === -32002) {
+      return { success: false, error: "Request pending. Check your wallet." };
     }
     
     return { success: false, error: error?.message || "Transaction failed. Please try again." };
