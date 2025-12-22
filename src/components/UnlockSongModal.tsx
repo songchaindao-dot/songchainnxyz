@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown } from 'lucide-react';
+import { X, Lock, Unlock, Loader2, ExternalLink, Music, Wallet, AlertCircle, Check, ArrowRight, Crown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Song } from '@/data/musicData';
 import { formatEthPrice, parseEthToWei } from '@/lib/songRegistry';
 import { connectWallet, hasWalletProvider, getWalletProvider } from '@/lib/baseWallet';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 interface UnlockSongModalProps {
   song: Song;
@@ -106,13 +107,23 @@ export function UnlockSongModal({
       
       if (result.success) {
         setStep('success');
+        
+        // Fire confetti celebration
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6']
+        });
+        
         toast.success(purchaseType === 'buy' 
-          ? 'Song purchased! You now own this track.' 
-          : 'Song unlocked! You have streaming access.');
+          ? '🎉 Congratulations! You now own this track!' 
+          : '🎉 Congratulations! Song unlocked!');
+        
         setTimeout(() => {
           onClose();
           setStep('select');
-        }, 2500);
+        }, 3500);
       } else {
         setError(result.error || 'Failed to unlock song');
         setStep('error');
@@ -211,28 +222,52 @@ export function UnlockSongModal({
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="text-center py-4 sm:py-6"
+                className="text-center py-6 sm:py-8"
               >
                 <motion.div 
-                  className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-green-500/20 flex items-center justify-center"
+                  className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-full bg-green-500/20 flex items-center justify-center relative"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', delay: 0.1 }}
                 >
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-green-500/20"
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
                   {purchaseType === 'buy' ? (
-                    <Crown size={28} className="text-green-500" />
+                    <Crown size={40} className="text-green-500" />
                   ) : (
-                    <Unlock size={28} className="text-green-500" />
+                    <Unlock size={40} className="text-green-500" />
                   )}
                 </motion.div>
-                <h3 className="text-lg font-semibold text-green-500">
-                  {purchaseType === 'buy' ? 'Song Purchased!' : 'Song Unlocked!'}
-                </h3>
-                <p className="text-muted-foreground text-sm mt-2">
-                  {purchaseType === 'buy' 
-                    ? 'You now own this track with full benefits' 
-                    : 'You now have unlimited streaming access'}
-                </p>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <h3 className="text-xl sm:text-2xl font-bold text-green-500">Congratulations!</h3>
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                  </div>
+                  
+                  <p className="text-lg font-semibold text-foreground mb-2">
+                    {purchaseType === 'buy' ? 'You now own this track!' : 'Song Unlocked!'}
+                  </p>
+                  
+                  <p className="text-muted-foreground text-sm">
+                    {purchaseType === 'buy' 
+                      ? 'Enjoy unlimited streaming + 1,000 offline plays' 
+                      : 'Enjoy unlimited streaming access'}
+                  </p>
+                  
+                  <div className="mt-4 flex items-center justify-center gap-2 text-xs text-green-500">
+                    <Check size={14} />
+                    <span>Transaction confirmed on Base</span>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
 
