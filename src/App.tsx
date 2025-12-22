@@ -15,6 +15,7 @@ const Discover = lazy(() => import("./pages/Discover"));
 const Artists = lazy(() => import("./pages/Artists"));
 const ArtistDetail = lazy(() => import("./pages/ArtistDetail"));
 const SongDetail = lazy(() => import("./pages/SongDetail"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
 const Education = lazy(() => import("./pages/Education"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -83,6 +84,7 @@ function AppContent() {
                   <Route path="/artists" element={<Artists />} />
                   <Route path="/artist/:id" element={<ArtistDetail />} />
                   <Route path="/song/:id" element={<SongDetail />} />
+                  <Route path="/marketplace" element={<Marketplace />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/social" element={<Social />} />
                   <Route path="/community" element={<Community />} />
