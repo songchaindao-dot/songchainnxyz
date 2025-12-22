@@ -16,10 +16,6 @@ type ConnectionState = 'idle' | 'connecting' | 'signing' | 'verifying' | 'succes
 type AuthMode = 'signin' | 'signup';
 type AuthView = 'main' | 'email' | 'phone' | 'verify-otp' | 'connect-wallet';
 
-function getBaseAppDeepLink(targetUrl: string) {
-  return `cbwallet://dapp?url=${encodeURIComponent(targetUrl)}`;
-}
-
 // Default to Zambia
 const DEFAULT_COUNTRY = COUNTRY_CODES.find(c => c.code === 'ZM') || COUNTRY_CODES[0];
 
@@ -28,7 +24,6 @@ export default function Auth() {
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showOtherOptions, setShowOtherOptions] = useState(false);
   
   // Auth state
@@ -46,7 +41,6 @@ export default function Auth() {
   // Track if user signed in via email/phone but needs wallet
   const [pendingWalletConnection, setPendingWalletConnection] = useState(false);
 
-  // Only detect Base App wallet, not MetaMask or other wallets
   // Detect any wallet provider (MetaMask, Coinbase, Rainbow, etc.)
   const hasWallet = typeof window !== 'undefined' && (() => {
     const ethereum = (window as any).ethereum;
@@ -55,19 +49,10 @@ export default function Auth() {
 
   const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/\D/g, '')}`;
 
-  const openInBaseApp = () => {
-    const target = window.location.href;
-    const deepLink = getBaseAppDeepLink(target);
-    window.location.href = deepLink;
-    setTimeout(() => setShowInstallPrompt(true), 2500);
-  };
-
   const handleWalletSignIn = async () => {
     setError(null);
     // Proceed if any wallet is available
     if (!hasWallet && !isWalletDetected) {
-      // Show install options
-      setShowInstallPrompt(true);
       return;
     }
 

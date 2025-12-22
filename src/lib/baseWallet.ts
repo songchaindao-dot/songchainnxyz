@@ -250,16 +250,3 @@ export async function sendTransaction(params: {
     return { error: error?.message || "Transaction failed" };
   }
 }
-
-// Legacy exports for backward compatibility
-export const isBaseAppAvailable = hasWalletProvider;
-export const connectWithBaseApp = async (_nonce: string) => {
-  const result = await connectWallet();
-  return {
-    success: result.success,
-    address: result.address,
-    error: result.error,
-    message: undefined,
-    signature: undefined,
-  };
-};

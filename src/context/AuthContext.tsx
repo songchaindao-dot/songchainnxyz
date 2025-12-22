@@ -22,9 +22,6 @@ interface AuthContextType {
   signInWithWallet: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  // Legacy alias
-  signInWithBase: () => Promise<{ error: Error | null }>;
-  isBaseAppDetected: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -278,9 +275,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithWallet,
       signOut,
       refreshProfile,
-      // Legacy aliases for backward compatibility
-      signInWithBase: signInWithWallet,
-      isBaseAppDetected: isWalletDetected,
     }}>
       {children}
     </AuthContext.Provider>
