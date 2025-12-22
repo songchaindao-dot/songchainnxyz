@@ -361,7 +361,7 @@ export async function buySong(
   
   const provider = getWalletProvider();
   if (!provider) {
-    return { success: false, error: "No wallet connected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet." };
+    return { success: false, error: "No wallet detected. Install MetaMask, Coinbase Wallet, Rainbow, or any wallet that supports Base." };
   }
   
   try {

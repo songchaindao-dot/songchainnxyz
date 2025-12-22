@@ -32,6 +32,29 @@ export function hasWalletProvider(): boolean {
 }
 
 /**
+ * Detect the name of the connected wallet provider
+ */
+export function getWalletName(): string {
+  if (typeof window === "undefined") return "Unknown Wallet";
+  const ethereum = (window as any).ethereum;
+  if (!ethereum) return "Unknown Wallet";
+
+  // Check for specific wallets via their injected properties
+  if (ethereum.isMetaMask && !ethereum.isCoinbaseWallet) return "MetaMask";
+  if (ethereum.isCoinbaseWallet) return "Coinbase Wallet";
+  if (ethereum.isRainbow) return "Rainbow";
+  if (ethereum.isTrust) return "Trust Wallet";
+  if (ethereum.isBraveWallet) return "Brave Wallet";
+  if (ethereum.isPhantom) return "Phantom";
+  if (ethereum.isRabby) return "Rabby";
+  if (ethereum.isFrame) return "Frame";
+  if (ethereum.isTokenPocket) return "TokenPocket";
+  if (ethereum.isOKExWallet) return "OKX Wallet";
+
+  return "Wallet";
+}
+
+/**
  * Get the injected Ethereum provider (any wallet)
  */
 export function getWalletProvider(): EIP1193Provider | null {
