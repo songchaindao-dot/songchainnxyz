@@ -338,7 +338,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                   <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary" />
-                  <span className="text-foreground">Beta Mode</span>
+                  <span className="text-foreground">Music Ownership in Beta Mode</span>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                   <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-muted" />
