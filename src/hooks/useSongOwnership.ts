@@ -7,12 +7,8 @@ import {
   getOfflinePlays,
   setOfflinePlays,
   decrementOfflinePlays,
-  hasUsedPreview,
-  markPreviewUsed,
   buySong,
   parseEthToWei,
-  getPreviewTime,
-  getPreviewThreshold,
   clearPreviewData
 } from '@/lib/songRegistry';
 
@@ -42,8 +38,6 @@ export function useSongOwnership(songId: string): SongOwnership {
   const [balance, setBalance] = useState<bigint>(BigInt(0));
   const [offlinePlaysRemaining, setOfflinePlaysRemaining] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [previewUsed, setPreviewUsed] = useState(false);
-  const [previewTimeUsed, setPreviewTimeUsed] = useState(0);
   
   // Get user's wallet address (stored in audience_profiles or from session)
   const userAddress = user?.user_metadata?.wallet_address;
@@ -51,9 +45,7 @@ export function useSongOwnership(songId: string): SongOwnership {
   // Check if this song requires on-chain ownership
   const isTokenGated = isOnChainSong(songId);
   
-  // Calculate remaining preview seconds
-  const previewThreshold = getPreviewThreshold();
-  const previewSecondsRemaining = Math.max(0, previewThreshold - previewTimeUsed);
+  const previewSecondsRemaining = 0;
   
   // Determine ownership status
   const getStatus = useCallback((): OwnershipStatus => {
@@ -64,22 +56,15 @@ export function useSongOwnership(songId: string): SongOwnership {
       if (offlinePlays > 0) return 'offline_ready';
       return 'owned';
     }
-    
-    if (previewUsed || hasUsedPreview(songId, userAddress)) {
-      return 'preview_used';
-    }
-    
     return 'preview';
-  }, [isTokenGated, balance, previewUsed, songId, userAddress]);
+  }, [isTokenGated, balance, songId]);
   
   const status = getStatus();
   
-  // Strict locking: if preview is used, block all playback
-  const isLocked = status === 'preview_used';
+  const isLocked = false;
   
-  // Determine if user can play - NO if preview is exhausted
-  const canPlay = status === 'free' || status === 'owned' || status === 'offline_ready' || status === 'preview';
-  const isPreviewOnly = status === 'preview';
+  const canPlay = true;
+  const isPreviewOnly = false;
   
   // Check on-chain ownership
   const checkOwnership = useCallback(async () => {
@@ -112,14 +97,9 @@ export function useSongOwnership(songId: string): SongOwnership {
     }
   }, [isTokenGated, userAddress, songId]);
   
-  // Check preview status on mount and sync state
   useEffect(() => {
-    if (isTokenGated) {
-      setPreviewUsed(hasUsedPreview(songId, userAddress));
-      setOfflinePlaysRemaining(getOfflinePlays(songId));
-      setPreviewTimeUsed(getPreviewTime(songId, userAddress));
-    }
-  }, [isTokenGated, songId, userAddress]);
+    if (isTokenGated) setOfflinePlaysRemaining(getOfflinePlays(songId));
+  }, [isTokenGated, songId]);
   
   // Check ownership on mount and when wallet changes
   useEffect(() => {
@@ -154,8 +134,6 @@ export function useSongOwnership(songId: string): SongOwnership {
       onStatusUpdate?.('Finalizing...');
       // Clear preview data since user now owns the song
       clearPreviewData(songId, addressToUse);
-      setPreviewUsed(false);
-      setPreviewTimeUsed(0);
       // Refresh balance
       await checkOwnership();
     }
@@ -163,13 +141,7 @@ export function useSongOwnership(songId: string): SongOwnership {
     return result;
   }, [isTokenGated, userAddress, songId, checkOwnership]);
   
-  // Record that preview was used
-  const recordPreviewPlay = useCallback(() => {
-    if (isTokenGated && status === 'preview') {
-      markPreviewUsed(songId, userAddress);
-      setPreviewUsed(true);
-    }
-  }, [isTokenGated, status, songId, userAddress]);
+  const recordPreviewPlay = useCallback(() => {}, []);
   
   // Record offline play and decrement counter
   const recordOfflinePlay = useCallback((): number => {
@@ -204,9 +176,9 @@ export function getOwnershipLabel(status: OwnershipStatus, offlinePlays?: number
     case 'free':
       return '';
     case 'preview':
-      return 'Preview';
+      return 'Stream';
     case 'preview_used':
-      return 'Unlock to Play';
+      return 'Stream';
     case 'owned':
       return 'Owned';
     case 'offline_ready':

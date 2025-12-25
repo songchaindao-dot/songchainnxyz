@@ -6,6 +6,7 @@ import { useEngagement } from '@/context/EngagementContext';
 import { Slider } from '@/components/ui/slider';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { SpinningSongArt } from './SpinningSongArt';
+import { ShareSongButton } from './ShareSongButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -249,6 +250,12 @@ export const AudioPlayer = memo(function AudioPlayer() {
                 >
                   <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </button>
+
+                <ShareSongButton
+                  songId={currentSong.id}
+                  songTitle={currentSong.title}
+                  artistName={currentSong.artist}
+                />
               </div>
 
               {/* Time & Volume - desktop only */}

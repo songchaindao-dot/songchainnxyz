@@ -23,11 +23,7 @@ export interface OnChainSong {
 
 // Map of app song IDs to on-chain song data
 export const ON_CHAIN_SONGS: Record<string, OnChainSong> = {
-  "7": {
-    songId: 0,
-    tokenAddress: SONG_REGISTRY_ADDRESS,
-    artistWallet: "0x4440397b9E67A020bc96269F263817BE63184F3A"
-  }
+
 };
 
 /**

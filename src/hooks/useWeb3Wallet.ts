@@ -1,11 +1,10 @@
 import { useAccount, useDisconnect, useBalance } from 'wagmi';
-import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { base } from 'wagmi/chains';
+import { ensureWeb3ModalInitialized } from '@/lib/web3Config';
 
 export function useWeb3Wallet() {
   const { address, isConnected, isConnecting, connector } = useAccount();
   const { disconnect } = useDisconnect();
-  const { open, close } = useWeb3Modal();
   
   const { data: balanceData, isLoading: isBalanceLoading, refetch: refetchBalance } = useBalance({
     address: address,
@@ -13,11 +12,13 @@ export function useWeb3Wallet() {
   });
 
   const openConnectModal = async () => {
-    await open();
+    const modal = ensureWeb3ModalInitialized();
+    await modal?.open({ view: 'Connect' });
   };
 
   const openAccountModal = async () => {
-    await open({ view: 'Account' });
+    const modal = ensureWeb3ModalInitialized();
+    await modal?.open({ view: 'Account' });
   };
 
   const disconnectWallet = () => {

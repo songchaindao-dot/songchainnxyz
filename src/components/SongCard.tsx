@@ -1,11 +1,11 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Heart, Lock } from 'lucide-react';
+import { Play, Pause, Heart } from 'lucide-react';
 import { Song } from '@/data/musicData';
 import { usePlayerState, usePlayerActions } from '@/context/PlayerContext';
 import { useEngagement } from '@/context/EngagementContext';
 import { useSongPopularity } from '@/hooks/usePopularity';
-import { useSongOwnership, getOwnershipLabel } from '@/hooks/useSongOwnership';
+import { useSongOwnership } from '@/hooks/useSongOwnership';
 import { cn } from '@/lib/utils';
 import { SpinningSongArt } from './SpinningSongArt';
 import { AIArtwork } from './AIArtwork';
@@ -13,7 +13,6 @@ import { ShareSongButton } from './ShareSongButton';
 import { OwnershipBadge } from './OwnershipBadge';
 import { UnlockSongModal } from './UnlockSongModal';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
 
 interface SongCardProps {
   song: Song;
@@ -32,13 +31,9 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   // Song ownership for token-gated songs
   const { 
     status: ownershipStatus, 
-    canPlay, 
-    isPreviewOnly, 
-    isLocked,
     offlinePlaysRemaining,
     previewSecondsRemaining,
     unlockSong,
-    recordPreviewPlay 
   } = useSongOwnership(song.id);
   
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -64,22 +59,12 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
   }, []);
 
   const handlePlay = useCallback(() => {
-    // Check if song is token-gated and locked (preview exhausted)
-    if (isTokenGated && isLocked) {
-      setShowUnlockModal(true);
-      return;
-    }
-    
     if (isCurrentSong) {
       togglePlay();
     } else {
-      // Pass ownership info to player for enforcement
-      const userAddress = user?.user_metadata?.wallet_address;
-      const hasOwnership = ownershipStatus === 'owned' || ownershipStatus === 'offline_ready';
-      
-      playSong(song, { userAddress, hasOwnership });
+      playSong(song);
     }
-  }, [isTokenGated, isLocked, isCurrentSong, togglePlay, playSong, song, ownershipStatus, user]);
+  }, [isCurrentSong, togglePlay, playSong, song]);
 
   const handleLike = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -122,11 +107,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                   whileHover={{ opacity: 1 }}
                   className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm"
                 >
-                  {isTokenGated && isLocked ? (
-                    <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
-                  ) : (
-                    <Play className="w-4 h-4 sm:w-5 sm:h-5 text-foreground ml-0.5" />
-                  )}
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-foreground ml-0.5" />
                 </motion.div>
               </>
             )}
@@ -242,9 +223,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
                 whileTap={{ scale: 0.95 }}
                 className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-glow-intense"
               >
-                {isTokenGated && isLocked ? (
-                  <Lock className="w-6 h-6 text-destructive" />
-                ) : isCurrentSong && isPlaying ? (
+                {isCurrentSong && isPlaying ? (
                   <Pause className="w-6 h-6 text-primary-foreground" />
                 ) : (
                   <Play className="w-6 h-6 text-primary-foreground ml-0.5" />

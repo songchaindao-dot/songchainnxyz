@@ -5,9 +5,6 @@ import App from "./App.tsx";
 import "./index.css";
 import { Web3Provider } from "./components/Web3Provider";
 
-// Initialize web3 config
-import "./lib/web3Config";
-
 // Shared query client for wagmi and app
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +16,26 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+if (typeof window !== "undefined" && typeof window.fetch === "function") {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof Request
+          ? input.url
+          : input instanceof URL
+            ? input.href
+            : String(input);
+
+    if (url.includes("pulse.walletconnect.org/batch")) {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+
+    return originalFetch(input, init);
+  };
+}
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

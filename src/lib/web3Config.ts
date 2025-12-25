@@ -1,7 +1,6 @@
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 import { defaultWagmiConfig } from '@web3modal/wagmi/react/config';
 import { base } from 'wagmi/chains';
-import { reconnect } from '@wagmi/core';
 
 // WalletConnect Project ID
 const projectId = '8b68fe8730c4f8ac97065fb052022217';
@@ -25,23 +24,39 @@ export const wagmiConfig = defaultWagmiConfig({
   enableWalletConnect: true,
   enableInjected: true,
   enableEIP6963: true,
-  enableCoinbase: true,
+  enableCoinbase: false,
 });
 
-// Create Web3Modal
-createWeb3Modal({
-  wagmiConfig,
-  projectId,
-  enableAnalytics: false,
-  enableOnramp: false,
-  themeMode: 'dark',
-  themeVariables: {
-    '--w3m-accent': '#8B5CF6',
-    '--w3m-border-radius-master': '12px',
+let isWeb3ModalInitialized = false;
+let web3Modal: ReturnType<typeof createWeb3Modal> | undefined;
+
+export function ensureWeb3ModalInitialized() {
+  if (isWeb3ModalInitialized) return web3Modal;
+  if (typeof window === 'undefined') return;
+  isWeb3ModalInitialized = true;
+
+  try {
+    const ws = (window as any).WebSocket;
+    if (ws?.prototype && typeof ws.prototype.disconnect !== 'function' && typeof ws.prototype.close === 'function') {
+      ws.prototype.disconnect = ws.prototype.close;
+    }
+
+    web3Modal = createWeb3Modal({
+      wagmiConfig,
+      projectId,
+      enableAnalytics: false,
+      enableOnramp: false,
+      themeMode: 'dark',
+      themeVariables: {
+        '--w3m-accent': '#8B5CF6',
+        '--w3m-border-radius-master': '12px',
+      }
+    });
+  } catch (err) {
+    void err;
   }
-});
 
-// Attempt to reconnect on load
-reconnect(wagmiConfig);
+  return web3Modal;
+}
 
 export { projectId };

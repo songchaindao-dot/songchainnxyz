@@ -16,7 +16,6 @@ const Artists = lazy(() => import("./pages/Artists"));
 const ArtistDetail = lazy(() => import("./pages/ArtistDetail"));
 const SongDetail = lazy(() => import("./pages/SongDetail"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
-const Education = lazy(() => import("./pages/Education"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -42,54 +41,52 @@ function AppContent() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
 
   if (isLoading) {
-    return <PageLoader />;
-  }
-
-  if (!isAuthenticated) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <Auth />
-      </Suspense>
-    );
-  }
-
-  if (needsOnboarding) {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Onboarding />
-      </Suspense>
+      <BrowserRouter>
+        <PageLoader />
+      </BrowserRouter>
     );
   }
 
   return (
-    <OfflineQueueProvider>
-      <PlayerProvider>
-        <EngagementProvider>
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-              <div className="pb-20 lg:pb-0">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/discover" element={<Discover />} />
-                  <Route path="/artists" element={<Artists />} />
-                  <Route path="/artist/:id" element={<ArtistDetail />} />
-                  <Route path="/song/:id" element={<SongDetail />} />
-                  <Route path="/marketplace" element={<Marketplace />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/social" element={<Social />} />
-                  <Route path="/community" element={<Community />} />
-                  <Route path="/audience/:userId" element={<AudienceProfile />} />
-                  <Route path="/install" element={<Install />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
-              <BottomTabBar />
-            </Suspense>
-          </BrowserRouter>
-        </EngagementProvider>
-      </PlayerProvider>
-    </OfflineQueueProvider>
+    <BrowserRouter>
+      {!isAuthenticated ? (
+        <Suspense fallback={<PageLoader />}>
+          <Auth />
+        </Suspense>
+      ) : needsOnboarding ? (
+        <Suspense fallback={<PageLoader />}>
+          <Onboarding />
+        </Suspense>
+      ) : (
+        <OfflineQueueProvider>
+          <PlayerProvider>
+            <EngagementProvider>
+              <Suspense fallback={<PageLoader />}>
+                <div className="pb-20 lg:pb-0">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/discover" element={<Discover />} />
+                    <Route path="/artists" element={<Artists />} />
+                    <Route path="/artist/:id" element={<ArtistDetail />} />
+                    <Route path="/song/:id" element={<SongDetail />} />
+                    <Route path="/marketplace" element={<Marketplace />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/social" element={<Social />} />
+                    <Route path="/community" element={<Community />} />
+                    <Route path="/audience/:userId" element={<AudienceProfile />} />
+                    <Route path="/install" element={<Install />} />
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+                <BottomTabBar />
+              </Suspense>
+            </EngagementProvider>
+          </PlayerProvider>
+        </OfflineQueueProvider>
+      )}
+    </BrowserRouter>
   );
 }
 

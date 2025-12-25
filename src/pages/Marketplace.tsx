@@ -41,8 +41,6 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   
   const {
     status: ownershipStatus,
-    canPlay,
-    isLocked,
     offlinePlaysRemaining,
     previewSecondsRemaining,
     unlockSong,
@@ -64,18 +62,10 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
   }, [popularityData, song.id]);
   
   const handlePlay = () => {
-    // Check if song is locked (preview exhausted)
-    if (isLocked) {
-      setShowUnlockModal(true);
-      return;
-    }
-    
     if (isCurrentSong) {
       togglePlay();
     } else {
-      const userAddress = user?.user_metadata?.wallet_address;
-      const hasOwnership = ownershipStatus === 'owned' || ownershipStatus === 'offline_ready';
-      playSong(song, { userAddress, hasOwnership });
+      playSong(song);
     }
   };
   
@@ -135,15 +125,10 @@ function MarketplaceSongCard({ song }: { song: typeof SONGS[0] }) {
             whileTap={{ scale: 0.95 }}
             onClick={handlePlay}
             className={cn(
-              "absolute bottom-4 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-glow transition-all",
-              isLocked 
-                ? "bg-destructive/20" 
-                : "gradient-primary"
+              "absolute bottom-4 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-glow transition-all gradient-primary"
             )}
           >
-            {isLocked ? (
-              <Lock className="w-6 h-6 text-destructive" />
-            ) : isCurrentSong && isPlaying ? (
+            {isCurrentSong && isPlaying ? (
               <Pause className="w-6 h-6 text-primary-foreground" />
             ) : (
               <Play className="w-6 h-6 text-primary-foreground ml-1" />

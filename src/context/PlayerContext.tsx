@@ -1,15 +1,11 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { Song, SONGS } from '@/data/musicData';
-import { isOnChainSong, hasUsedPreview, markPreviewUsed, addPreviewTime } from '@/lib/songRegistry';
-import { toast } from 'sonner';
 
 // Split context for better performance - components only re-render for what they need
 interface PlayerStateContext {
   currentSong: Song | null;
   isPlaying: boolean;
   queue: Song[];
-  isPreviewMode: boolean;
-  blockedSongId: string | null;
 }
 
 interface PlayerTimeContext {
@@ -27,7 +23,6 @@ interface PlayerActionsContext {
   playNext: () => void;
   playPrevious: () => void;
   addToQueue: (song: Song) => void;
-  clearBlockedSong: () => void;
   volume: number;
 }
 
@@ -43,16 +38,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(0.8);
   const [queue, setQueue] = useState<Song[]>(SONGS);
   const [isCrossfading, setIsCrossfading] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [blockedSongId, setBlockedSongId] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
   const playNextRef = useRef<() => void>(() => {});
   const crossfadeTriggeredRef = useRef(false);
-  const previewUserRef = useRef<string | undefined>(undefined);
-  const previewTimeTrackingRef = useRef<{ lastTime: number; accumulated: number }>({ lastTime: 0, accumulated: 0 });
-  const previewNotifiedRef = useRef(false); // Track if we've already shown the "preview counted" toast
   const crossfadeDuration = 2000; // 2 second crossfade
   const crossfadeThreshold = 2; // Start crossfade 2 seconds before song ends
 
@@ -88,16 +78,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
       
-      // Track preview playback time - mark as used after 5 seconds but don't interrupt
-      if (isPreviewMode && currentSong) {
-        const elapsed = audio.currentTime - previewTimeTrackingRef.current.lastTime;
-        if (elapsed > 0 && elapsed < 2) { // Sanity check for reasonable time increment
-          // Check if 5-second threshold reached - silently mark as used
-          addPreviewTime(currentSong.id, elapsed, previewUserRef.current);
-        }
-        previewTimeTrackingRef.current.lastTime = audio.currentTime;
-      }
-      
       // Trigger crossfade when approaching end of song
       const timeRemaining = audio.duration - audio.currentTime;
       if (
@@ -115,7 +95,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
     };
-  }, [isPreviewMode, currentSong]);
+  }, []);
 
   // Handle song ended - lock preview songs after they finish
   useEffect(() => {
@@ -123,15 +103,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!audio) return;
 
     const handleEnded = () => {
-      // If this was a preview song, ensure it's locked for future plays
-      if (isPreviewMode && currentSong) {
-        markPreviewUsed(currentSong.id, previewUserRef.current);
-        setBlockedSongId(currentSong.id);
-        setIsPreviewMode(false);
-        setIsPlaying(false);
-        return;
-      }
-      
       // Only trigger next song if crossfade wasn't already started
       if (!crossfadeTriggeredRef.current) {
         playNextRef.current();
@@ -143,7 +114,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => {
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [isPreviewMode, currentSong]);
+  }, []);
 
   // Crossfade transition function
   const crossfadeToSong = useCallback((song: Song) => {
@@ -191,43 +162,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }, stepDuration);
   }, [volume, isCrossfading, crossfadeDuration]);
 
-  const playSong = useCallback((song: Song, options?: { userAddress?: string; hasOwnership?: boolean }) => {
-    const { userAddress, hasOwnership } = options || {};
-    
-    // Reset preview tracking for new song
-    previewTimeTrackingRef.current = { lastTime: 0, accumulated: 0 };
-    previewNotifiedRef.current = false;
-    
-    // Check if song is token-gated
-    if (song.isTokenGated && isOnChainSong(song.id)) {
-      // If user has ownership, play normally
-      if (hasOwnership) {
-        setIsPreviewMode(false);
-        setBlockedSongId(null);
-      } else {
-        // Check if preview was already used (threshold exceeded)
-        if (hasUsedPreview(song.id, userAddress)) {
-          // Block playback - preview already exhausted, let UI handle unlock modal
-          setBlockedSongId(song.id);
-          return; // Don't play at all
-        }
-        
-        // Allow full preview play - will be marked as used after 5 seconds
-        setIsPreviewMode(true);
-        previewUserRef.current = userAddress;
-        
-        // Show one-time educational message about preview policy
-        toast('🎵 One Free Listen', {
-          description: "This is your only free preview. Please don't skip - once it ends or you navigate away, you'll need to unlock to listen again.",
-          duration: 6000,
-        });
-      }
-    } else {
-      setIsPreviewMode(false);
-    }
-    
+  const playSong = useCallback((song: Song, _options?: { userAddress?: string; hasOwnership?: boolean }) => {
     if (audioRef.current) {
-      if (isPlaying && currentSong && !song.isTokenGated) {
+      if (isPlaying && currentSong) {
         crossfadeToSong(song);
       } else {
         audioRef.current.src = song.audioUrl;
@@ -240,11 +177,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [crossfadeToSong, isPlaying, currentSong, volume]);
 
   const togglePlay = useCallback(() => {
-    // Don't allow play if current song is blocked
-    if (currentSong && blockedSongId === currentSong.id) {
-      return; // Silently block - UI will show locked state
-    }
-    
     if (audioRef.current) {
       if (audioRef.current.paused) {
         audioRef.current.play();
@@ -254,7 +186,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setIsPlaying(false);
       }
     }
-  }, [currentSong, blockedSongId]);
+  }, []);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
@@ -264,16 +196,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const play = useCallback(() => {
-    // Don't allow play if current song is blocked
-    if (currentSong && blockedSongId === currentSong.id) {
-      return; // Silently block - UI will show locked state
-    }
-    
     if (audioRef.current && currentSong) {
       audioRef.current.play();
       setIsPlaying(true);
     }
-  }, [currentSong, blockedSongId]);
+  }, [currentSong]);
 
   const seekTo = useCallback((time: number) => {
     if (audioRef.current) {
@@ -289,10 +216,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const clearBlockedSong = useCallback(() => {
-    setBlockedSongId(null);
-  }, []);
-
   // Crossfade to next song for DJ-style transitions
   const playNext = useCallback(() => {
     if (currentSong && queue.length > 0) {
@@ -300,26 +223,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const nextIndex = (currentIndex + 1) % queue.length;
       const nextSong = queue[nextIndex];
       
-      // Skip token-gated songs in auto-play if not owned
-      if (nextSong.isTokenGated) {
-        // For now, skip to the next non-gated song
-        let skipIndex = nextIndex;
-        let attempts = 0;
-        while (queue[skipIndex]?.isTokenGated && attempts < queue.length) {
-          skipIndex = (skipIndex + 1) % queue.length;
-          attempts++;
-        }
-        if (attempts < queue.length) {
-          playSong(queue[skipIndex], { hasOwnership: false });
-        }
-        return;
-      }
-      
       // Use crossfade for automatic transitions
       if (isPlaying) {
         crossfadeToSong(nextSong);
       } else {
-        playSong(nextSong, { hasOwnership: false });
+        playSong(nextSong);
       }
     }
   }, [currentSong, queue, isPlaying, crossfadeToSong, playSong]);
@@ -338,7 +246,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (isPlaying) {
         crossfadeToSong(prevSong);
       } else {
-        playSong(prevSong, { hasOwnership: false });
+        playSong(prevSong);
       }
     }
   }, [currentSong, queue, isPlaying, crossfadeToSong, playSong]);
@@ -352,9 +260,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     currentSong,
     isPlaying,
     queue,
-    isPreviewMode,
-    blockedSongId,
-  }), [currentSong, isPlaying, queue, isPreviewMode, blockedSongId]);
+  }), [currentSong, isPlaying, queue]);
 
   const timeValue = useMemo(() => ({
     currentTime,
@@ -371,9 +277,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playNext,
     playPrevious,
     addToQueue,
-    clearBlockedSong,
     volume,
-  }), [playSong, togglePlay, pause, play, seekTo, setVolume, playNext, playPrevious, addToQueue, clearBlockedSong, volume]);
+  }), [playSong, togglePlay, pause, play, seekTo, setVolume, playNext, playPrevious, addToQueue, volume]);
 
   return (
     <PlayerStateCtx.Provider value={stateValue}>

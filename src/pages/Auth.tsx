@@ -202,6 +202,7 @@ export default function Auth() {
 
   // Auto-trigger wallet sign-in when wallet is detected (only on main view)
   React.useEffect(() => {
+    if (!import.meta.env.DEV) return;
     if ((isWalletDetected || hasWallet) && connectionState === 'idle' && !error && authView === 'main') {
       const timer = setTimeout(() => handleWalletSignIn(), 500);
       return () => clearTimeout(timer);
