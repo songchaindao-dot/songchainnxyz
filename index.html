@@ -46,27 +46,20 @@
         if (!isDevHost) return;
         if (!("serviceWorker" in navigator)) return;
         var key = "songchainn_dev_sw_reset_done";
-        var state = sessionStorage.getItem(key);
-        if (state === "done") return;
+        if (sessionStorage.getItem(key) === "done") return;
+        sessionStorage.setItem(key, "done");
 
-        if (state !== "pending" && navigator.serviceWorker.controller) {
-          sessionStorage.setItem(key, "pending");
-          location.reload();
-          return;
-        }
-
-        Promise.all([
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            if (!regs.length) return false;
-            return Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () { return true; });
-          }),
-          caches.keys().then(function (keys) {
-            if (!keys.length) return false;
-            return Promise.all(keys.map(function (k) { return caches.delete(k); })).then(function () { return true; });
-          })
-        ]).finally(function () {
-          sessionStorage.setItem(key, "done");
-          if (state === "pending") location.reload();
+        window.addEventListener("load", function () {
+          Promise.all([
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              if (!regs.length) return false;
+              return Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () { return true; });
+            }),
+            (typeof caches !== "undefined" && caches.keys ? caches.keys().then(function (keys) {
+              if (!keys.length) return false;
+              return Promise.all(keys.map(function (k) { return caches.delete(k); })).then(function () { return true; });
+            }) : Promise.resolve(false))
+          ]).catch(function () {});
         });
       })();
     </script>
