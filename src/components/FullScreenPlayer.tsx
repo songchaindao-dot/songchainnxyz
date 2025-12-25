@@ -21,7 +21,7 @@ const FullScreenVideoArt = memo(function FullScreenVideoArt({ isPlaying }: { isP
   useEffect(() => {
     if (videoRef.current) {
       if (isPlaying) {
-        videoRef.current.play();
+        void videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
       }
@@ -58,7 +58,7 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
   const { togglePlay, seekTo, setVolume, playNext, playPrevious, volume } = usePlayerActions();
 
   const { toggleLike, isLiked } = useEngagement();
-  const { copied, shareSong, copyToClipboard, shareToX, getShareUrl } = useShare();
+  const { copied, shareSong, copyToClipboard, shareToX, getSongShareUrl } = useShare();
   const [showQueue, setShowQueue] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [shuffle, setShuffle] = useState(false);
@@ -68,13 +68,13 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
 
   const handleNativeShare = async () => {
     if (currentSong) {
-      await shareSong(currentSong.title, currentSong.artist, currentSong.id);
+      await shareSong(currentSong.title, currentSong.artist, currentSong.id, currentSong.coverImage);
     }
   };
 
   const handleCopyLink = async () => {
     if (currentSong) {
-      const url = getShareUrl('song', currentSong.id);
+      const url = getSongShareUrl({ id: currentSong.id, title: currentSong.title, artist: currentSong.artist, coverImage: currentSong.coverImage });
       await copyToClipboard(url);
     }
   };
@@ -82,7 +82,7 @@ export const FullScreenPlayer = memo(function FullScreenPlayer({ isOpen, onClose
   const handleShareToX = () => {
     if (currentSong) {
       const text = `🎵 Listening to "${currentSong.title}" by ${currentSong.artist} on @$ongChainn`;
-      const url = getShareUrl('song', currentSong.id);
+      const url = getSongShareUrl({ id: currentSong.id, title: currentSong.title, artist: currentSong.artist, coverImage: currentSong.coverImage });
       shareToX(text, url);
     }
   };

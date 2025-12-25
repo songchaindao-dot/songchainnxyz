@@ -237,6 +237,7 @@ export default function SongDetail() {
                   songId={song.id} 
                   songTitle={song.title} 
                   artistName={artist.name}
+                  coverImage={song.coverImage}
                   variant="button"
                 />
               </div>

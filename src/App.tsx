@@ -1,9 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { PlayerProvider } from "@/context/PlayerContext";
 import { EngagementProvider } from "@/context/EngagementContext";
@@ -36,6 +36,26 @@ function PageLoader() {
   );
 }
 
+function RedirectHandler() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const redirectPath = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const r = searchParams.get('r');
+    if (!r) return null;
+    if (!r.startsWith('/')) return null;
+    return r;
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!redirectPath) return;
+    navigate(redirectPath, { replace: true });
+  }, [navigate, redirectPath]);
+
+  return null;
+}
+
 // AppContent must be rendered inside AuthProvider
 function AppContent() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
@@ -64,12 +84,14 @@ function AppContent() {
             <EngagementProvider>
               <Suspense fallback={<PageLoader />}>
                 <div className="pb-20 lg:pb-0">
+                  <RedirectHandler />
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/discover" element={<Discover />} />
                     <Route path="/artists" element={<Artists />} />
                     <Route path="/artist/:id" element={<ArtistDetail />} />
                     <Route path="/song/:id" element={<SongDetail />} />
+                    <Route path="/post/:id" element={<Social />} />
                     <Route path="/marketplace" element={<Marketplace />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/social" element={<Social />} />

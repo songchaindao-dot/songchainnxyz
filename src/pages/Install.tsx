@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -16,10 +16,13 @@ import { Navigation } from '@/components/Navigation';
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/hooks/use-toast';
+import { clearDeferredInstallPrompt, getDeferredInstallPrompt } from '@/components/DownloadAppBanner';
 
 export default function Install() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const deferredPromptRef = useRef<any>(null);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://songchainn.xyz';
 
   useEffect(() => {
@@ -32,13 +35,65 @@ export default function Install() {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
   }, []);
 
-  const handleInstallClick = async () => {
-    // Try to trigger the install prompt if available
-    const deferredPrompt = (window as any).deferredInstallPrompt;
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
+  useEffect(() => {
+    const onBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      deferredPromptRef.current = e;
+    };
+
+    const onGlobalPromptCaptured = () => {
+      const prompt = getDeferredInstallPrompt();
+      if (prompt) {
+        deferredPromptRef.current = prompt;
+      }
+    };
+
+    const onAppInstalled = () => {
+      deferredPromptRef.current = null;
+      setIsInstalled(true);
+    };
+
+    const onGlobalAppInstalled = () => {
+      deferredPromptRef.current = null;
+      setIsInstalled(true);
+    };
+
+    const existingPrompt = getDeferredInstallPrompt();
+    if (existingPrompt) {
+      deferredPromptRef.current = existingPrompt;
     }
-  };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    window.addEventListener('pwa:installprompt', onGlobalPromptCaptured);
+    window.addEventListener('pwa:appinstalled', onGlobalAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+      window.removeEventListener('pwa:installprompt', onGlobalPromptCaptured);
+      window.removeEventListener('pwa:appinstalled', onGlobalAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = useCallback(async () => {
+    if (isInstalled) return;
+    const deferredPrompt = deferredPromptRef.current ?? getDeferredInstallPrompt();
+    if (!deferredPrompt) {
+      toast({
+        title: 'Install not available',
+        description: 'Use your browser menu to "Add to Home Screen" or "Install App".',
+      });
+      return;
+    }
+
+    deferredPrompt.prompt();
+    try {
+      await deferredPrompt.userChoice;
+    } finally {
+      deferredPromptRef.current = null;
+      clearDeferredInstallPrompt();
+    }
+  }, [isInstalled]);
 
   const steps = {
     ios: [

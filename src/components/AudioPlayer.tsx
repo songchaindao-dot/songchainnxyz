@@ -96,9 +96,7 @@ export const AudioPlayer = memo(function AudioPlayer() {
         event_type: 'play',
         user_id: user?.id || null,
       });
-      console.log('Play recorded for song:', songId);
-    } catch (error) {
-      console.error('Error recording play:', error);
+    } catch {
     }
   }, [addPlay, user?.id]);
 
@@ -255,6 +253,7 @@ export const AudioPlayer = memo(function AudioPlayer() {
                   songId={currentSong.id}
                   songTitle={currentSong.title}
                   artistName={currentSong.artist}
+                  coverImage={currentSong.coverImage}
                 />
               </div>
 

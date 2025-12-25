@@ -16,7 +16,7 @@ export function useShare() {
       case 'song':
         return `${baseUrl}/song/${id}`;
       case 'post':
-        return `${baseUrl}/social?post=${id}`;
+        return `${baseUrl}/post/${id}`;
       case 'artist':
         return `${baseUrl}/artist/${id}`;
       case 'profile':
@@ -25,6 +25,14 @@ export function useShare() {
         return baseUrl;
     }
   }, []);
+
+  const getSongShareUrl = useCallback((song: { id: string; title?: string; artist?: string; coverImage?: string }) => {
+    const url = new URL(getShareUrl('song', song.id));
+    if (song.title) url.searchParams.set('title', song.title);
+    if (song.artist) url.searchParams.set('artist', song.artist);
+    if (song.coverImage) url.searchParams.set('img', song.coverImage);
+    return url.toString();
+  }, [getShareUrl]);
 
   const copyToClipboard = useCallback(async (url: string) => {
     try {
@@ -67,14 +75,14 @@ export function useShare() {
     });
   }, [getShareUrl, nativeShare]);
 
-  const shareSong = useCallback(async (songTitle: string, artistName: string, songId: string) => {
-    const url = getShareUrl('song', songId);
+  const shareSong = useCallback(async (songTitle: string, artistName: string, songId: string, coverImage?: string) => {
+    const url = getSongShareUrl({ id: songId, title: songTitle, artist: artistName, coverImage });
     return nativeShare({
       title: `${songTitle} - ${artistName}`,
       text: `Check out "${songTitle}" by ${artistName} on $ongChainn!`,
       url,
     });
-  }, [getShareUrl, nativeShare]);
+  }, [getSongShareUrl, nativeShare]);
 
   const shareProfile = useCallback(async (profileName: string, userId: string) => {
     const url = getShareUrl('profile', userId);
@@ -88,6 +96,7 @@ export function useShare() {
   return {
     copied,
     getShareUrl,
+    getSongShareUrl,
     copyToClipboard,
     nativeShare,
     shareToX,

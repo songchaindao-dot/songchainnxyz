@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
@@ -12,7 +12,7 @@ import {
   Bell,
   Sparkles
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Navigation } from '@/components/Navigation';
 import { PostComposer } from '@/components/social/PostComposer';
 import { MusicFeedCard } from '@/components/social/MusicFeedCard';
@@ -33,6 +33,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 export default function Social() {
   const { user, audienceProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
   const {
     posts,
     isLoading,
@@ -53,6 +55,8 @@ export default function Social() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
+  const [sharedPost, setSharedPost] = useState<SocialPostWithProfile | null>(null);
+  const [isLoadingSharedPost, setIsLoadingSharedPost] = useState(false);
   const [commentSheet, setCommentSheet] = useState<{ isOpen: boolean; postId: string | null }>({
     isOpen: false,
     postId: null
@@ -60,6 +64,11 @@ export default function Social() {
   const [currentComments, setCurrentComments] = useState<PostComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
+
+  const sharedPostId = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return params.id || searchParams.get('post');
+  }, [location.search, params.id]);
 
   useEffect(() => {
     const fetchSuggestedUsers = async () => {
@@ -88,6 +97,88 @@ export default function Social() {
     refetchPosts(feedType === 'following' ? 'following' : 'all');
   }, [feedType]);
 
+  useEffect(() => {
+    if (!sharedPostId) {
+      setSharedPost(null);
+      setIsLoadingSharedPost(false);
+      return;
+    }
+
+    const attemptScrollToPost = () => {
+      const postIndex = posts.findIndex(p => p.id === sharedPostId);
+      if (postIndex < 0) return false;
+      const container = feedRef.current;
+      if (!container) return false;
+      const itemHeight = container.clientHeight;
+      container.scrollTo({ top: postIndex * itemHeight, behavior: 'auto' });
+      setCurrentPostIndex(postIndex);
+      return true;
+    };
+
+    if (attemptScrollToPost()) return;
+
+    const fetchSharedPost = async () => {
+      setIsLoadingSharedPost(true);
+      try {
+        const { data: postData } = await supabase
+          .from('social_posts')
+          .select('*')
+          .eq('id', sharedPostId)
+          .maybeSingle();
+
+        if (!postData) {
+          setSharedPost(null);
+          return;
+        }
+
+        const [profileRes, likesRes, commentsRes, userLikeRes] = await Promise.all([
+          supabase
+            .from('audience_profiles')
+            .select('*')
+            .eq('user_id', postData.user_id)
+            .maybeSingle(),
+          supabase
+            .from('post_likes')
+            .select('post_id')
+            .eq('post_id', postData.id),
+          supabase
+            .from('post_comments')
+            .select('post_id')
+            .eq('post_id', postData.id),
+          user
+            ? supabase
+                .from('post_likes')
+                .select('post_id')
+                .eq('user_id', user.id)
+                .eq('post_id', postData.id)
+            : Promise.resolve({ data: [] } as any)
+        ]);
+
+        const enrichedPost: SocialPostWithProfile = {
+          id: postData.id,
+          user_id: postData.user_id,
+          content: postData.content,
+          song_id: postData.song_id,
+          playlist_id: postData.playlist_id,
+          post_type: postData.post_type as 'text' | 'song_share' | 'playlist_share' | 'listening' | 'welcome' | 'song_like',
+          created_at: postData.created_at,
+          updated_at: postData.updated_at,
+          profile: (profileRes.data as AudienceProfile) || undefined,
+          likes_count: likesRes.data?.length || 0,
+          comments_count: commentsRes.data?.length || 0,
+          is_liked: (userLikeRes.data?.length || 0) > 0,
+        };
+
+        setSharedPost(enrichedPost);
+        setCurrentPostIndex(0);
+      } finally {
+        setIsLoadingSharedPost(false);
+      }
+    };
+
+    fetchSharedPost();
+  }, [posts, sharedPostId, user]);
+
   const filteredPosts = feedType === 'following' 
     ? posts.filter(p => following.includes(p.user_id) || p.user_id === user?.id)
     : posts;
@@ -111,6 +202,7 @@ export default function Social() {
   const currentCommentsCount = currentPost?.comments_count || 0;
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (sharedPostId) return;
     const container = e.currentTarget;
     const scrollTop = container.scrollTop;
     const itemHeight = container.clientHeight;
@@ -123,6 +215,10 @@ export default function Social() {
   const goToProfile = (userId: string) => {
     navigate(`/audience/${userId}`);
   };
+
+  const postsToRender = sharedPost ? [sharedPost] : filteredPosts;
+  const effectiveIsLoading = isLoading || isLoadingSharedPost;
+  const effectiveCommentsCount = sharedPost ? sharedPost.comments_count : currentCommentsCount;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -238,14 +334,14 @@ export default function Social() {
         onScroll={handleScroll}
         style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
       >
-        {isLoading ? (
+        {effectiveIsLoading ? (
           <div className="h-[calc(100vh-180px)] flex items-center justify-center">
             <div className="text-center">
               <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-muted-foreground">Loading your feed...</p>
             </div>
           </div>
-        ) : filteredPosts.length === 0 ? (
+        ) : postsToRender.length === 0 ? (
           <div className="h-[calc(100vh-180px)] flex items-center justify-center px-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -284,7 +380,7 @@ export default function Social() {
           </div>
         ) : (
           <div className="max-w-lg mx-auto px-2">
-            {filteredPosts.map((post, index) => (
+            {postsToRender.map((post, index) => (
               <div 
                 key={post.id} 
                 className="snap-start py-2"
@@ -296,7 +392,7 @@ export default function Social() {
                   onFollow={followUser}
                   isFollowing={isFollowing(post.user_id)}
                   onComment={() => handleOpenComments(post.id)}
-                  isVisible={index === currentPostIndex}
+                  isVisible={sharedPost ? true : index === currentPostIndex}
                 />
               </div>
             ))}
@@ -353,7 +449,7 @@ export default function Social() {
         comments={currentComments}
         isLoading={loadingComments}
         onAddComment={handleAddComment}
-        commentsCount={currentCommentsCount}
+        commentsCount={effectiveCommentsCount}
       />
 
       <Navigation />

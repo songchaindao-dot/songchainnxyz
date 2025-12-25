@@ -50,7 +50,7 @@ export function MusicFeedCard({
   const { user } = useAuth();
   const { currentSong, isPlaying, playSong, pause, play } = usePlayer();
   const navigate = useNavigate();
-  const { sharePost, shareSong, copied, getShareUrl, copyToClipboard, shareToX } = useShare();
+  const { sharePost, shareSong, copied, getShareUrl, getSongShareUrl, copyToClipboard, shareToX } = useShare();
   const [showHeart, setShowHeart] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -63,19 +63,23 @@ export function MusicFeedCard({
 
   const handleShare = () => {
     if (song && artist) {
-      shareSong(song.title, artist.name, song.id);
+      shareSong(song.title, artist.name, song.id, song.coverImage);
     } else {
       sharePost(post.id, post.content || undefined);
     }
   };
 
   const handleCopyLink = () => {
-    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const url = song
+      ? getSongShareUrl({ id: song.id, title: song.title, artist: artist?.name || song.artist, coverImage: song.coverImage })
+      : getShareUrl('post', post.id);
     copyToClipboard(url);
   };
 
   const handleShareToX = () => {
-    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const url = song
+      ? getSongShareUrl({ id: song.id, title: song.title, artist: artist?.name || song.artist, coverImage: song.coverImage })
+      : getShareUrl('post', post.id);
     const text = song && artist 
       ? `🎵 Listening to "${song.title}" by ${artist.name} on @$ongChainn\n\n`
       : `Check out this post on @$ongChainn\n\n`;
@@ -85,7 +89,7 @@ export function MusicFeedCard({
   useEffect(() => {
     if (videoRef.current) {
       if (isVisible && isThisSongPlaying) {
-        videoRef.current.play();
+        void videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
       }

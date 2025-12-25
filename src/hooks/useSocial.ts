@@ -33,7 +33,11 @@ export function useSocial() {
   const [followers, setFollowers] = useState<string[]>([]);
 
   const fetchFollowData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setFollowing([]);
+      setFollowers([]);
+      return;
+    }
 
     const [followingRes, followersRes] = await Promise.all([
       supabase
@@ -55,7 +59,11 @@ export function useSocial() {
   }, [user]);
 
   const fetchPosts = useCallback(async (feedType: 'all' | 'following' = 'all') => {
-    if (!user) return;
+    if (!user) {
+      setPosts([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
 
     let query = supabase
@@ -136,12 +144,18 @@ export function useSocial() {
   useEffect(() => {
     if (user) {
       fetchFollowData();
+    } else {
+      setFollowing([]);
+      setFollowers([]);
     }
   }, [user, fetchFollowData]);
 
   useEffect(() => {
     if (user) {
       fetchPosts();
+    } else {
+      setPosts([]);
+      setIsLoading(false);
     }
   }, [user, fetchPosts]);
 
@@ -158,8 +172,7 @@ export function useSocial() {
           schema: 'public',
           table: 'social_posts'
         },
-        (payload) => {
-          console.log('New post received:', payload);
+        () => {
           // Refetch posts when a new post is created
           fetchPosts();
         }

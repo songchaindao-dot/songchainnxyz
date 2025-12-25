@@ -7,21 +7,28 @@ import confetti from 'canvas-confetti';
 
 const BANNER_DISMISSED_KEY = 'download-app-banner-dismissed';
 
-// Store the deferred prompt globally and capture it immediately
 let deferredInstallPrompt: any = null;
+
+export function getDeferredInstallPrompt() {
+  return deferredInstallPrompt;
+}
+
+export function clearDeferredInstallPrompt() {
+  deferredInstallPrompt = null;
+}
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    console.log('PWA install prompt captured');
+    window.dispatchEvent(new Event('pwa:installprompt'));
   });
 
   // Listen for successful install
   window.addEventListener('appinstalled', () => {
-    console.log('PWA was installed');
     deferredInstallPrompt = null;
     localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
+    window.dispatchEvent(new Event('pwa:appinstalled'));
   });
 }
 
@@ -107,7 +114,6 @@ export function DownloadAppBanner() {
       playTone(659.25, now + 0.1, 0.15);  // E5
       playTone(783.99, now + 0.2, 0.25);  // G5
     } catch (error) {
-      console.log('Audio playback not supported');
     }
   }, []);
 
@@ -163,11 +169,9 @@ export function DownloadAppBanner() {
     try {
       // Check if we have a deferred prompt (Chrome/Android/Edge)
       if (deferredInstallPrompt) {
-        console.log('Triggering PWA install prompt');
         deferredInstallPrompt.prompt();
         
         const { outcome } = await deferredInstallPrompt.userChoice;
-        console.log('User choice:', outcome);
         
         if (outcome === 'accepted') {
           setInstallState('installing');
@@ -194,7 +198,6 @@ export function DownloadAppBanner() {
         });
       }
     } catch (error) {
-      console.error('Install error:', error);
       setInstallState('error');
       toast.error('Installation failed', {
         description: 'Please try using your browser menu to install the app'

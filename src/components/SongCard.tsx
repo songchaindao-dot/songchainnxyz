@@ -140,6 +140,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               songId={song.id} 
               songTitle={song.title} 
               artistName={song.artist}
+              coverImage={song.coverImage}
             />
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -244,6 +245,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               songId={song.id} 
               songTitle={song.title} 
               artistName={song.artist}
+              coverImage={song.coverImage}
             />
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -345,6 +347,7 @@ export const SongCard = memo(function SongCard({ song, index = 0, variant = 'def
               songId={song.id} 
               songTitle={song.title} 
               artistName={song.artist}
+              coverImage={song.coverImage}
             />
             <motion.button
               whileHover={{ scale: 1.1 }}

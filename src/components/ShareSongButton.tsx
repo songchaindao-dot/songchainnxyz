@@ -18,6 +18,7 @@ interface ShareSongButtonProps {
   songId: string;
   songTitle: string;
   artistName: string;
+  coverImage?: string;
   variant?: 'icon' | 'button' | 'dropdown';
   className?: string;
 }
@@ -26,14 +27,15 @@ export function ShareSongButton({
   songId, 
   songTitle, 
   artistName, 
+  coverImage,
   variant = 'icon',
   className = ''
 }: ShareSongButtonProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { getShareUrl, shareToX } = useShare();
+  const { getSongShareUrl, shareToX } = useShare();
 
-  const shareUrl = getShareUrl('song', songId);
+  const shareUrl = getSongShareUrl({ id: songId, title: songTitle, artist: artistName, coverImage });
   const shareText = `Check out "${songTitle}" by ${artistName} on $ongChainn!`;
 
   const handleCopyLink = useCallback(async () => {

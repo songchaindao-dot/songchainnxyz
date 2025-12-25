@@ -38,7 +38,7 @@ export function PostCard({
 }: PostCardProps) {
   const { user } = useAuth();
   const { playSong } = usePlayer();
-  const { sharePost, shareSong, copied, getShareUrl, copyToClipboard, shareToX } = useShare();
+  const { sharePost, shareSong, copied, getShareUrl, getSongShareUrl, copyToClipboard, shareToX } = useShare();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -50,19 +50,23 @@ export function PostCard({
 
   const handleShare = () => {
     if (song && artist) {
-      shareSong(song.title, artist.name, song.id);
+      shareSong(song.title, artist.name, song.id, song.coverImage);
     } else {
       sharePost(post.id, post.content || undefined);
     }
   };
 
   const handleCopyLink = () => {
-    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const url = song
+      ? getSongShareUrl({ id: song.id, title: song.title, artist: artist?.name || song.artist, coverImage: song.coverImage })
+      : getShareUrl('post', post.id);
     copyToClipboard(url);
   };
 
   const handleShareToX = () => {
-    const url = song ? getShareUrl('song', song.id) : getShareUrl('post', post.id);
+    const url = song
+      ? getSongShareUrl({ id: song.id, title: song.title, artist: artist?.name || song.artist, coverImage: song.coverImage })
+      : getShareUrl('post', post.id);
     const text = song && artist 
       ? `🎵 Listening to "${song.title}" by ${artist.name} on @SongChainn\n\n`
       : `Check out this post on @SongChainn\n\n`;
