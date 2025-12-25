@@ -228,7 +228,7 @@ export default function Auth() {
       case 'success':
         return (<><CheckCircle2 className="w-5 h-5 mr-2" />Connected!</>);
       default:
-        return (<><Wallet className="w-5 h-5 mr-2" />{hasWallet || isWalletDetected ? 'Connect Wallet' : 'Install Wallet'}</>);
+        return (<><Wallet className="w-5 h-5 mr-2" />{hasWallet || isWalletDetected ? 'Connect Wallet' : 'Sign in with Base Wallet'}</>);
     }
   };
 
