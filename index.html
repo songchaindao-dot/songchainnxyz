@@ -66,6 +66,7 @@
           })
         ]).finally(function () {
           sessionStorage.setItem(key, "done");
+          if (state === "pending") location.reload();
         });
       })();
     </script>

@@ -7,29 +7,14 @@ import confetti from 'canvas-confetti';
 
 const BANNER_DISMISSED_KEY = 'download-app-banner-dismissed';
 
-let deferredInstallPrompt: any = null;
-
 export function getDeferredInstallPrompt() {
-  return deferredInstallPrompt;
+  if (typeof window === 'undefined') return null;
+  return (window as any).__songchainnDeferredInstallPrompt ?? null;
 }
 
 export function clearDeferredInstallPrompt() {
-  deferredInstallPrompt = null;
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    window.dispatchEvent(new Event('pwa:installprompt'));
-  });
-
-  // Listen for successful install
-  window.addEventListener('appinstalled', () => {
-    deferredInstallPrompt = null;
-    localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
-    window.dispatchEvent(new Event('pwa:appinstalled'));
-  });
+  if (typeof window === 'undefined') return;
+  (window as any).__songchainnDeferredInstallPrompt = null;
 }
 
 type InstallState = 'idle' | 'prompting' | 'installing' | 'complete' | 'error';
@@ -40,6 +25,7 @@ export function DownloadAppBanner() {
   const [installState, setInstallState] = useState<InstallState>('idle');
   const [installProgress, setInstallProgress] = useState(0);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showInstallConfirm, setShowInstallConfirm] = useState(false);
 
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
   const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -114,6 +100,7 @@ export function DownloadAppBanner() {
       playTone(659.25, now + 0.1, 0.15);  // E5
       playTone(783.99, now + 0.2, 0.25);  // G5
     } catch (error) {
+      void error;
     }
   }, []);
 
@@ -168,10 +155,11 @@ export function DownloadAppBanner() {
 
     try {
       // Check if we have a deferred prompt (Chrome/Android/Edge)
-      if (deferredInstallPrompt) {
-        deferredInstallPrompt.prompt();
+      const deferredPrompt = getDeferredInstallPrompt();
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
         
-        const { outcome } = await deferredInstallPrompt.userChoice;
+        const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
           setInstallState('installing');
@@ -184,7 +172,7 @@ export function DownloadAppBanner() {
         }
         
         // Clear the prompt - it can only be used once
-        deferredInstallPrompt = null;
+        clearDeferredInstallPrompt();
       } else if (isIOS) {
         // For iOS, show the instructions overlay
         setInstallState('idle');
@@ -250,6 +238,65 @@ export function DownloadAppBanner() {
 
   return (
     <>
+      <AnimatePresence>
+        {showInstallConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-background/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+            onClick={() => setShowInstallConfirm(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-sm glass-card rounded-2xl border border-border p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <h3 className="font-heading font-semibold text-foreground text-base">
+                    Install app now?
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Adds $ongChainn to your home screen.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowInstallConfirm(false)}
+                  className="p-1 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setShowInstallConfirm(false)}
+                  disabled={installState !== 'idle'}
+                >
+                  No
+                </Button>
+                <Button
+                  className="flex-1 gradient-primary"
+                  onClick={async () => {
+                    setShowInstallConfirm(false);
+                    await handleInstall();
+                  }}
+                  disabled={installState !== 'idle'}
+                >
+                  Yes
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isVisible && (
           <motion.div
@@ -358,7 +405,7 @@ export function DownloadAppBanner() {
                         <div className="flex items-center gap-2">
                           <Button 
                             size="sm" 
-                            onClick={handleInstall}
+                            onClick={() => setShowInstallConfirm(true)}
                             disabled={installState !== 'idle'}
                             className="gradient-primary text-xs h-8 gap-1.5"
                           >

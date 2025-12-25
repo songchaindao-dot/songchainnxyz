@@ -96,7 +96,8 @@ export const AudioPlayer = memo(function AudioPlayer() {
         event_type: 'play',
         user_id: user?.id || null,
       });
-    } catch {
+    } catch (error) {
+      void error;
     }
   }, [addPlay, user?.id]);
 
@@ -254,6 +255,7 @@ export const AudioPlayer = memo(function AudioPlayer() {
                   songTitle={currentSong.title}
                   artistName={currentSong.artist}
                   coverImage={currentSong.coverImage}
+                  dropdownSide="top"
                 />
               </div>
 

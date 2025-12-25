@@ -20,6 +20,7 @@ interface ShareSongButtonProps {
   artistName: string;
   coverImage?: string;
   variant?: 'icon' | 'button' | 'dropdown';
+  dropdownSide?: 'top' | 'bottom';
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function ShareSongButton({
   artistName, 
   coverImage,
   variant = 'icon',
+  dropdownSide = 'bottom',
   className = ''
 }: ShareSongButtonProps) {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -69,21 +71,21 @@ export function ShareSongButton({
           text: shareText,
           url: shareUrl
         });
-        
-        // Record share event
+
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.from('song_analytics').insert({
           song_id: songId,
           user_id: user?.id || null,
           event_type: 'share'
         });
-        
+
         setShowDropdown(false);
-      } catch {
-        // User cancelled or not supported
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setShowDropdown(true);
       }
     } else {
-      handleCopyLink();
+      await handleCopyLink();
     }
   }, [songTitle, artistName, shareText, shareUrl, songId, handleCopyLink]);
 
@@ -178,7 +180,9 @@ export function ShareSongButton({
                 initial={{ opacity: 0, scale: 0.95, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                className="absolute right-0 top-full mt-2 z-50 min-w-[180px] glass-card rounded-xl border border-border p-2 shadow-lg"
+                className={`absolute right-0 z-50 min-w-[180px] glass-card rounded-xl border border-border p-2 shadow-lg ${
+                  dropdownSide === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+                }`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {shareOptions.map((option, index) => (
@@ -239,7 +243,9 @@ export function ShareSongButton({
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="absolute right-0 top-full mt-2 z-50 min-w-[160px] glass-card rounded-xl border border-border p-1.5 shadow-lg"
+              className={`absolute right-0 z-50 min-w-[160px] glass-card rounded-xl border border-border p-1.5 shadow-lg ${
+                dropdownSide === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-2 py-1.5 mb-1 border-b border-border/50">

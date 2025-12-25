@@ -5,6 +5,12 @@ import App from "./App.tsx";
 import "./index.css";
 import { Web3Provider } from "./components/Web3Provider";
 
+declare global {
+  interface Window {
+    __songchainnDeferredInstallPrompt?: any;
+  }
+}
+
 // Shared query client for wagmi and app
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +41,25 @@ if (typeof window !== "undefined" && typeof window.fetch === "function") {
 
     return originalFetch(input, init);
   };
+}
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e: any) => {
+    e.preventDefault();
+    window.__songchainnDeferredInstallPrompt = e;
+    window.dispatchEvent(new Event("pwa:installprompt"));
+  });
+
+  window.addEventListener("appinstalled", () => {
+    window.__songchainnDeferredInstallPrompt = null;
+    window.dispatchEvent(new Event("pwa:appinstalled"));
+  });
 }
 
 createRoot(document.getElementById("root")!).render(

@@ -22,6 +22,7 @@ import { clearDeferredInstallPrompt, getDeferredInstallPrompt } from '@/componen
 export default function Install() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showInstallConfirm, setShowInstallConfirm] = useState(false);
   const deferredPromptRef = useRef<any>(null);
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://songchainn.xyz';
 
@@ -138,6 +139,54 @@ export default function Install() {
       <Navigation />
 
       <main className="container mx-auto px-4 py-8 relative z-10">
+        {showInstallConfirm && (
+          <div
+            className="fixed inset-0 z-[110] bg-background/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+            onClick={() => setShowInstallConfirm(false)}
+          >
+            <div
+              className="w-full max-w-sm glass-card rounded-2xl border border-border p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <h3 className="font-heading font-semibold text-foreground text-base">
+                    Install app now?
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Adds $ongChainn to your home screen.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowInstallConfirm(false)}
+                  className="p-1 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground flex-shrink-0"
+                >
+                  <Plus className="w-4 h-4 rotate-45" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setShowInstallConfirm(false)}
+                >
+                  No
+                </Button>
+                <Button
+                  className="flex-1 gradient-primary"
+                  onClick={async () => {
+                    setShowInstallConfirm(false);
+                    await handleInstallClick();
+                  }}
+                >
+                  Yes
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -294,7 +343,7 @@ export default function Install() {
                   className="mt-6"
                 >
                   <Button 
-                    onClick={handleInstallClick}
+                    onClick={() => setShowInstallConfirm(true)}
                     className="w-full gradient-primary gap-2"
                     size="lg"
                   >
